@@ -4,8 +4,13 @@ import Vue from 'vue'
 import App from './App'
 import router from './router'
 import './reset.css'
-
+import Element from 'element-ui'
+import 'element-ui/lib/theme-chalk/index.css';
+Vue.use(Element)
 Vue.config.productionTip = false
+
+import VueDraggable from 'vuedraggable'
+Vue.use(VueDraggable)
 
 /* eslint-disable no-new */
 new Vue({
