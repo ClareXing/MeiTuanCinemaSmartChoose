@@ -152,7 +152,6 @@
         return finalReuslt
       },
 
-
 			//推荐选座,参数是推荐座位数目
       smartChoose: function(num){
         //找到影院座位水平垂直中间位置的后一排
@@ -200,7 +199,7 @@
         let oldArray = this.seatArray.slice();
         for(let i=0;i<result.length;i++){
         	//选定座位
-        	oldArray[result[i][0]][result[i][1]] = 1
+          oldArray[result[i][0]][result[i][1]] = 1
         }
         this.seatArray = oldArray;
       },

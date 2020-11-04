@@ -7,11 +7,12 @@
 <script>
   import cinemaSeatChoose from './components/seat-layout.vue'
   import Draggable from 'vuedraggable'
+
   export default {
     name: 'App',
     components:{
       cinemaSeatChoose,
-      Draggable
+      Draggable,
     }
   }
 </script>

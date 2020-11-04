@@ -18,23 +18,21 @@
     </el-button-group>
     </div>
   </div>
-      <div class="inner-seat-wrapper" ref="innerSeatWrapper" >
-        <div v-for="row in seatRow">
+      <div class="inner-seat-wrapper" ref="innerSeatWrapper">
+        <div v-for="row in seatRow" :key="row"   >
           <!--这里的v-if很重要，如果没有则会导致报错，因为seatArray初始状态为空-->
-          <div v-for="col in seatCol"
-            v-if="seatArray.length>0"
-                class="seat" :style="{width:seatSize+'px',height:seatSize+'px'}">
-                <div class="inner-seat"
-                :class="seatArray[row-1][col-1]===2?'block-circle':(seatArray[row-1][col-1]===1?'selected-seat':'unselected-seat')"
-                >
-            </div>
+          <div v-for="col in seatCol" :key="col" v-if="seatArray.length>0"
+            class="square-block" :style="{width:seatSize+'px',height:seatSize+'px'}">
+                <seat :v-if="seatArray[row-1][col-1]!==0" :seatType='seatArray[row-1][col-1].toString()' seatOrientation='u'/>
           </div>
-
-        <div></div>
         </div>
+
+         <div>
+      <!--添加设施-->
+            <test/>
+         </div>
       </div>
     </div>
-
     <el-dialog title="选择模型" :visible.sync="dialogModelSelectVisible">
       <el-form>
         <el-form-item>
@@ -45,8 +43,8 @@
     <el-dialog title="编辑模型" :visible.sync="dialogModelInfoVisible">
       <el-form>
       <el-form-item label="U型方向">
-        <!-- <el-input v-model="seat_model_config.orientation"></el-input> -->
-          <el-select v-model="seat_model_config.orientation" placeholder="请选择">
+        <!-- <el-input v-model="seatModelConfig.orientation"></el-input> -->
+          <el-select v-model="seatModelConfig.orientation" placeholder="请选择">
             <el-option
               v-for="item in orientations"
               :key="item.value"
@@ -56,14 +54,14 @@
       </el-select>
       </el-form-item>
       <el-form-item label="横向座位数">
-          <el-input v-model="seat_model_config.seatRowNum"></el-input>
+          <el-input v-model="seatModelConfig.seatRowNum"></el-input>
       </el-form-item>
         <el-form-item label="纵向座位数">
-            <el-input v-model="seat_model_config.seatColNum"></el-input>
+            <el-input v-model="seatModelConfig.seatColNum"></el-input>
       </el-form-item>
         <el-form-item label="环数">
-          <el-input-number v-model="seat_model_config.circleNum" :min="1" :max="3" label="环数"></el-input-number>
-        <!-- <el-input v-model="seat_model_config.circleNum"></el-input> -->
+          <el-input-number v-model="seatModelConfig.circleNum" :min="1" :max="3" label="环数"></el-input-number>
+        <!-- <el-input v-model="seatModelConfig.circleNum"></el-input> -->
       </el-form-item>
       </el-form>
     <div slot="footer" class="dialog-footer">
@@ -82,8 +80,8 @@
     <el-dialog title="添加设施" :visible.sync="dialogModelInfoVisible">
       <el-form>
       <el-form-item label="朝向">
-        <!-- <el-input v-model="seat_model_config.orientation"></el-input> -->
-          <el-select v-model="seat_model_config.orientation" placeholder="请选择">
+        <!-- <el-input v-model="seatModelConfig.orientation"></el-input> -->
+          <el-select v-model="seatModelConfig.orientation" placeholder="请选择">
             <el-option
               v-for="item in orientations"
               :key="item.value"
@@ -93,14 +91,14 @@
       </el-select>
       </el-form-item>
       <el-form-item label="长">
-          <el-input v-model="seat_model_config.seatRowNum"></el-input>
+          <el-input v-model="seatModelConfig.seatRowNum"></el-input>
       </el-form-item>
         <el-form-item label="宽">
-            <el-input v-model="seat_model_config.seatColNum"></el-input>
+            <el-input v-model="seatModelConfig.seatColNum"></el-input>
       </el-form-item>
         <el-form-item label="环数">
-          <el-input-number v-model="seat_model_config.circleNum" :min="1" :max="3" label="环数"></el-input-number>
-        <!-- <el-input v-model="seat_model_config.circleNum"></el-input> -->
+          <el-input-number v-model="seatModelConfig.circleNum" :min="1" :max="3" label="环数"></el-input-number>
+        <!-- <el-input v-model="seatModelConfig.circleNum"></el-input> -->
       </el-form-item>
       </el-form>
     <div slot="footer" class="dialog-footer">
@@ -110,10 +108,15 @@
     </el-dialog>
   </div>
 </template>
-
 <script>
+   import seat from './customComponents/seat.vue'
+   import test from './customComponents/test.vue'
 	export default {
-		name: 'cinemaSeatChoose',
+    name: 'cinemaSeatChoose',
+   components:{
+      seat,
+      test
+    },
 		data () {
 			return {
         // 座位是否可编辑
@@ -123,11 +126,11 @@
         // 存储布局的格子二维数组
         seatArray:[],
         // 布局行数
-        seatRow:15,
+        seatRow:20,
         // 布局列数
-        seatCol:20,
+        seatCol:24,
         // 布局格子的大小
-        seatSize:'',
+        seatSize:0,
         //推荐选座最大数量
         smartChooseMaxNum:5,
         // 模型选择对话框显示
@@ -137,32 +140,33 @@
         //添加设施对话框显示
         dialoginfrastructureVisible:false ,
        // 座位模板信息
-       seat_model_config : {
+       seatModelConfig : {
+         modelName:'', // 模板名称
          seatModelType:'',//座位模型('u-shape','gyration-shape','desk-shape,'customize')
          seatColNum: 7 ,//横向座位数
          seatRowNum:7,//纵向座位数:
          orientation:'u',//朝向（上下左右 一次 u d l r）默认朝上
          circleNum:3, // 有多少环，最多支持三环
-         infrastructures:[],//设备信息 infrastructure_info
+         infrastructures:[],//设备信息 infrastructureInfo
          seats:[],// 座位信息
        },
        // 设施信息
-       infrastructure_info:{
-           top_index:0 ,// 设施顶部位于布局的第几格
-           left_index:0 ,// 设施左边部分位于布局的第几格
-           infrastructure_width:0, //设施横向占多少格
-           infrastructure_height:0,//设施纵向占多少格
-           infrastructure_name: '',   // 设施名称
-           infrastructure_orientation:'' //设施朝（上下左右 依次 u d l r）默认朝上
+       infrastructureInfo:{
+           topIndex:0 ,// 设施顶部位于布局的第几格
+           leftIndex:0 ,// 设施左边部分位于布局的第几格
+           infrastructureWidth:0, //设施横向占多少格
+           infrastructureHeight:0,//设施纵向占多少格
+           infrastructureName: '',   // 设施名称
+           infrastructureOrientation:'' //设施朝（上下左右 依次 u d l r）默认朝上
         },
         // 座位信息
-        seat_info:{
-           seat_type:'',//座位类型（普通座位，主席座等）
-           row_index:0, //座位位于布局的第几行
-           col_index:0, //座位位于布局的第几列
-           seat_no:'', //座位编号
-           seat_lable:'' ,//座位文字显示信息（与座位号二者只能显示其中一个）
-           seat_orientation:''//座位朝向（上下左右 依次 u d l r）默认朝上
+        seatInfo:{
+           seatType:'',//座位类型（普通座位，主席座等）
+           rowIndex:0, //座位位于布局的第几行
+           colIndex:0, //座位位于布局的第几列
+           seatNo:'', //座位编号
+           seatLable:'' ,//座位文字显示信息（与座位号二者只能显示其中一个）
+           seatOrientation:''//座位朝向（上下左右 依次 u d l r）默认朝上
         },
        // 朝向
        orientations: [{
@@ -196,7 +200,7 @@
       next:function(){
           // 选择模型 的对话框关闭
           this.dialogModelSelectVisible= false
-          this.seat_model_config.seatModelType = 'u-shape'
+          this.seatModelConfig.seatModelType = 'u-shape'
           this.dialogModelInfoVisible =true
       },
       // 返回模型选择
@@ -235,16 +239,17 @@
       },
       //渲染座位区域 目前只有U型
       renderSeat:function(){
-        let seatColNum = parseInt(this.seat_model_config.seatColNum);
-        let seatRowNum = parseInt(this.seat_model_config.seatRowNum);
-        let orientation = this.seat_model_config.orientation;
-        let circleNum =parseInt(this.seat_model_config.circleNum);
+        let seatColNum = parseInt(this.seatModelConfig.seatColNum);
+        let seatRowNum = parseInt(this.seatModelConfig.seatRowNum);
+        let orientation = this.seatModelConfig.orientation;
+        let circleNum =parseInt(this.seatModelConfig.circleNum);
         //确定第一个环的左上开始位置(最外环为第一个环)
-        let  first_start_row = Math.ceil(this.seatRow/2)-Math.ceil(seatRowNum /2)  // 根据布局大小计算环开始的行位置
-        let first_start_col = Math.ceil(this.seatCol/2)-Math.ceil(seatColNum /2)  // 根据布局大小计算环开始的列位置
+        let  startRowIndex = Math.ceil(this.seatRow/2)-Math.ceil(seatRowNum /2)  // 根据布局大小计算环开始的行位置
+        let startColIndex = Math.ceil(this.seatCol/2)-Math.ceil(seatColNum /2)  // 根据布局大小计算环开始的列位置
 
         let oldArray = this.seatArray.slice();
-        oldArray=this.hLayout(seatRowNum+4,seatColNum+4,first_start_row-2,first_start_col-2,oldArray,2);
+        oldArray=this.hLayout(seatRowNum+4,seatColNum+4,startRowIndex-2,startColIndex-2,oldArray,2);
+
         // validate(); //校验逻辑
         //如果是U型
         //朝向上或者下
@@ -258,116 +263,116 @@
         //校验逻辑也可以不写在这里直接 用rule 规则取校验
         if(circleNum===1){
             //画环
-            oldArray=this.hLayout(seatRowNum,seatColNum,first_start_row,first_start_col,oldArray);
+            oldArray=this.hLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
             //根据方向去掉多余的座位
-            this.seatArray= this.uLayout(first_start_row,first_start_col,seatColNum,seatRowNum,oldArray,orientation)
+            this.seatArray= this.uLayout(startRowIndex,startColIndex,seatColNum,seatRowNum,oldArray,orientation)
         }else if(circleNum===2){
             // 画第一个环
-            oldArray=this.hLayout(seatRowNum,seatColNum,first_start_row,first_start_col,oldArray);
+            oldArray=this.hLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
             //画第二个环
-            oldArray= this.hLayout(seatRowNum-2,seatColNum-2,first_start_row+1,first_start_col+1,oldArray);
+            oldArray= this.hLayout(seatRowNum-2,seatColNum-2,startRowIndex+1,startColIndex+1,oldArray);
             // 去掉第一个环多余座位
-            oldArray= this.uLayout(first_start_row,first_start_col,seatColNum,seatRowNum,oldArray,orientation)
+            oldArray= this.uLayout(startRowIndex,startColIndex,seatColNum,seatRowNum,oldArray,orientation)
             // 去掉第二个环多余座位
-            this.seatArray= this.uLayout(first_start_row+1,first_start_col+1,seatColNum-2,seatRowNum-2,oldArray,orientation,2)
+            this.seatArray= this.uLayout(startRowIndex+1,startColIndex+1,seatColNum-2,seatRowNum-2,oldArray,orientation,2)
         }else if(circleNum===3){
             // 画第一个环
-            oldArray=this.hLayout(seatRowNum,seatColNum,first_start_row,first_start_col,oldArray);
+            oldArray=this.hLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
             //画第二个环
-            oldArray= this.hLayout(seatRowNum-2,seatColNum-2,first_start_row+1,first_start_col+1,oldArray);
+            oldArray= this.hLayout(seatRowNum-2,seatColNum-2,startRowIndex+1,startColIndex+1,oldArray);
             // 画第三个环
-            oldArray= this.hLayout(seatRowNum-4,seatColNum-4,first_start_row+2,first_start_col+2,oldArray);
+            oldArray= this.hLayout(seatRowNum-4,seatColNum-4,startRowIndex+2,startColIndex+2,oldArray);
             // 去掉第一个环多余座位
-            oldArray= this.uLayout(first_start_row,first_start_col,seatColNum,seatRowNum,oldArray,orientation)
+            oldArray= this.uLayout(startRowIndex,startColIndex,seatColNum,seatRowNum,oldArray,orientation)
             // 去掉第二个环多余座位
-            oldArray= this.uLayout(first_start_row+1,first_start_col+1,seatColNum-2,seatRowNum-2,oldArray,orientation,2)
+            oldArray= this.uLayout(startRowIndex+1,startColIndex+1,seatColNum-2,seatRowNum-2,oldArray,orientation,2)
             // 去掉第三个环多余座位
-            this.seatArray= this.uLayout(first_start_row+2,first_start_col+2,seatColNum-4,seatRowNum-4,oldArray,orientation,3)
+            this.seatArray= this.uLayout(startRowIndex+2,startColIndex+2,seatColNum-4,seatRowNum-4,oldArray,orientation,3)
        }else{
               alert('请设置环数小于等于三的正整数')
       }
-
+       console.log(this.seatArray);
     },
 
       /** 根据朝向 去掉环中多余的座位
        * seatRowNum:横向座位数
        * seatColNum:纵向座位数
-       * first_start_row:左上角开始行位置
-       * first_start_col:左上角开始的列位置
+       * startRowIndex:左上角开始行位置
+       * startColIndex:左上角开始的列位置
        * oldArray:需要标注画环的二维数组
        * orientation:朝向
        * circleNum:当前处理第几个环（从外到里依次1、2、3）
        */
-      uLayout:function(first_start_row,first_start_col,seatColNum,seatRowNum,oldArray,orientation,circleNum=1){
+      uLayout:function(startRowIndex,startColIndex,seatColNum,seatRowNum,oldArray,orientation,circleNum=1){
          //向上
          if(orientation==='u'){
             for(let i=1;i<seatColNum-1;i++){
-                oldArray[first_start_row][first_start_col+i] = 0
+                oldArray[startRowIndex][startColIndex+i] = 0
             }
-            oldArray[first_start_row+seatRowNum-1][first_start_col]=0
-            oldArray[first_start_row+seatRowNum-1][first_start_col+seatColNum-1]=0
+            oldArray[startRowIndex+seatRowNum-1][startColIndex]=0
+            oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum-1]=0
             if(circleNum===2){
-              oldArray[first_start_row-1][first_start_col] = 1
-              oldArray[first_start_row-1][first_start_col+seatColNum-1] = 1
+              oldArray[startRowIndex-1][startColIndex] = 1
+              oldArray[startRowIndex-1][startColIndex+seatColNum-1] = 1
             }else if(circleNum===3){
-              oldArray[first_start_row-1][first_start_col] = 1
-              oldArray[first_start_row-1][first_start_col+seatColNum-1] = 1
-              oldArray[first_start_row-2][first_start_col] = 1
-              oldArray[first_start_row-2][first_start_col+seatColNum-1] = 1
+              oldArray[startRowIndex-1][startColIndex] = 1
+              oldArray[startRowIndex-1][startColIndex+seatColNum-1] = 1
+              oldArray[startRowIndex-2][startColIndex] = 1
+              oldArray[startRowIndex-2][startColIndex+seatColNum-1] = 1
             }
             return oldArray;
          }else if(orientation==='d'){
             //向下
             for(let i=1;i<seatColNum-1;i++){
-              oldArray[first_start_row+seatRowNum-1][first_start_col+i] = 0
+              oldArray[startRowIndex+seatRowNum-1][startColIndex+i] = 0
             }
-            oldArray[first_start_row][first_start_col]=0
-            oldArray[first_start_row][first_start_col+seatColNum-1]=0
+            oldArray[startRowIndex][startColIndex]=0
+            oldArray[startRowIndex][startColIndex+seatColNum-1]=0
 
              if(circleNum===2){
-              oldArray[first_start_row+seatRowNum][first_start_col] = 1
-              oldArray[first_start_row+seatRowNum][first_start_col+seatColNum-1] = 1
+              oldArray[startRowIndex+seatRowNum][startColIndex] = 1
+              oldArray[startRowIndex+seatRowNum][startColIndex+seatColNum-1] = 1
             }else if(circleNum===3){
-              oldArray[first_start_row+seatRowNum][first_start_col] = 1
-              oldArray[first_start_row+seatRowNum][first_start_col+seatColNum-1] = 1
-              oldArray[first_start_row+seatRowNum+1][first_start_col] = 1
-              oldArray[first_start_row+seatRowNum+1][first_start_col+seatColNum-1] = 1
+              oldArray[startRowIndex+seatRowNum][startColIndex] = 1
+              oldArray[startRowIndex+seatRowNum][startColIndex+seatColNum-1] = 1
+              oldArray[startRowIndex+seatRowNum+1][startColIndex] = 1
+              oldArray[startRowIndex+seatRowNum+1][startColIndex+seatColNum-1] = 1
             }
             return oldArray;
          }else if(orientation==='l'){
             //向左
             for(let i=1;i<seatRowNum-1;i++){
-                oldArray[first_start_row+i][first_start_col] = 0
+                oldArray[startRowIndex+i][startColIndex] = 0
             }
-            oldArray[first_start_row][first_start_col+seatColNum-1]=0
-            oldArray[first_start_row+seatRowNum-1][first_start_col+seatColNum-1]=0
+            oldArray[startRowIndex][startColIndex+seatColNum-1]=0
+            oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum-1]=0
 
             if(circleNum===2){
-              oldArray[first_start_row][first_start_col-1] = 1
-              oldArray[first_start_row+seatRowNum-1][first_start_col-1] = 1
+              oldArray[startRowIndex][startColIndex-1] = 1
+              oldArray[startRowIndex+seatRowNum-1][startColIndex-1] = 1
             }else if(circleNum===3){
-              oldArray[first_start_row][first_start_col-1] = 1
-              oldArray[first_start_row+seatRowNum-1][first_start_col-1] = 1
-              oldArray[first_start_row][first_start_col-2] = 1
-              oldArray[first_start_row+seatRowNum-1][first_start_col-2] = 1
+              oldArray[startRowIndex][startColIndex-1] = 1
+              oldArray[startRowIndex+seatRowNum-1][startColIndex-1] = 1
+              oldArray[startRowIndex][startColIndex-2] = 1
+              oldArray[startRowIndex+seatRowNum-1][startColIndex-2] = 1
             }
             return oldArray;
          }else if(orientation==='r'){
             //向右
             for(let i=1;i<seatRowNum-1;i++){
-                oldArray[first_start_row+i][first_start_col+seatColNum-1] = 0
+                oldArray[startRowIndex+i][startColIndex+seatColNum-1] = 0
             }
-            oldArray[first_start_row][first_start_col]=0
-            oldArray[first_start_row+seatRowNum-1][first_start_col]=0
+            oldArray[startRowIndex][startColIndex]=0
+            oldArray[startRowIndex+seatRowNum-1][startColIndex]=0
 
              if(circleNum===2){
-              oldArray[first_start_row][first_start_col+seatColNum] = 1
-              oldArray[first_start_row+seatRowNum-1][first_start_col+seatColNum] = 1
+              oldArray[startRowIndex][startColIndex+seatColNum] = 1
+              oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum] = 1
             }else if(circleNum===3){
-              oldArray[first_start_row][first_start_col+seatColNum] = 1
-              oldArray[first_start_row+seatRowNum-1][first_start_col+seatColNum] = 1
-              oldArray[first_start_row][first_start_col+seatColNum+1] = 1
-              oldArray[first_start_row+seatRowNum-1][first_start_col+seatColNum+1] = 1
+              oldArray[startRowIndex][startColIndex+seatColNum] = 1
+              oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum] = 1
+              oldArray[startRowIndex][startColIndex+seatColNum+1] = 1
+              oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum+1] = 1
             }
             return oldArray;
          }else{
@@ -380,19 +385,19 @@
        * 根据横向和纵向的座位数画环
        * seatRowNum:横向座位数
        * seatColNum:纵向座位数
-       * first_start_row:左上角开始行位置
-       * first_start_col:左上角开始的列位置
+       * startRowIndex:左上角开始行位置
+       * startColIndex:左上角开始的列位置
        * oldArray:需要标注画环的二维数组
        * setValue:设置环位置的数组坐标占位符
        */
-      hLayout:function(seatRowNum,seatColNum,first_start_row,first_start_col,oldArray,setValue=1){
+      hLayout:function(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray,setValue=1){
            for(let i=0;i<seatRowNum-1;i++){
-                oldArray[first_start_row+i][first_start_col] = setValue
-                oldArray[first_start_row+i][first_start_col+seatColNum-1] = setValue
+                oldArray[startRowIndex+i][startColIndex] = setValue
+                oldArray[startRowIndex+i][startColIndex+seatColNum-1] = setValue
             }
           for(let j=0;j<seatColNum;j++){
-               oldArray[first_start_row+seatRowNum-1][first_start_col+j] = setValue
-               oldArray[first_start_row][first_start_col+j] = setValue
+               oldArray[startRowIndex+seatRowNum-1][startColIndex+j] = setValue
+               oldArray[startRowIndex][startColIndex+j] = setValue
           }
            return oldArray;
       },
@@ -459,32 +464,19 @@
     width:100%;
     box-sizing: border-box;
   }
-  .seat{
+  .inner-seat{
+    width:100%;
+    height:100%;
+    cursor: pointer;
+  }
+  .square-block{
     float:left;
     display: flex;
     justify-content: center;
     align-items: center;
     /* margin: 5px 5px; */
-    margin: 5px;
+    border: white 5px solid;
     background: #EBEBEB;
-  }
-  .inner-seat{
-    width:90%;
-    height:90%;
-    cursor: pointer;
-  }
-  .selected-seat{
-    background: url('../assets/selected.png') center center no-repeat;
-    background-size: 100% 100%;
-  }
-  .unselected-seat{
-    background: url('../assets/unselected.png') center center no-repeat;
-    background-size: 50% 50%;
-  }
-  .block-circle{
-    background: #ff4949;
-      margin: -5px;
-    background-size: 100% 100%;
   }
   .screen-center{
     position: absolute;
@@ -527,6 +519,10 @@
   }
   .group-btn{
     float: right;
+  }
+  .bought-seat{
+     background: black;
+    background-size: 100% 100%;
   }
 
 </style>
