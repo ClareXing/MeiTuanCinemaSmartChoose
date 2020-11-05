@@ -15,34 +15,37 @@ clone本项目，然后npm install后直接npm start启动开发服务器即可
 
 
 座位预览
-一个DIV
-  "seat_layout_config": [
-        {
-            "normal_seatinfo": [
-                {
-                    "column_index": NumberInt("11"),
-                    "row_index": NumberInt("5"),
-                    "seat_type": "employee",
-                    "label": "1-2"
-                },
-                {
-                    "column_index": NumberInt("12"),
-                    "row_index": NumberInt("5"),
-                    "seat_type": "employee",
-                    "label": "1-3"
-                },
-                {
-                    "column_index": NumberInt("13"),
-                    "row_index": NumberInt("5"),
-                    "seat_type": "employee",
-                    "label": "1-4"
-                },
-信息：
-二维数组{
-  layoutType:
-  startRow
-  seatArray[]
-}
+
+模板
+
+      seat_Model_Config : {
+         modelName:'', // 模板名称
+         seatModelType:'',//座位模型('u-shape','gyration-shape','desk-shape,'customize')
+         seatColNum: 7 ,//横向座位数
+         seatRowNum:7,//纵向座位数:
+         orientation:'u',//朝向（上下左右 一次 u d l r）默认朝上
+         circleNum:3, // 有多少环，最多支持三环
+         infrastructures:[],//设备信息 infrastructureInfo
+         seats:[],// 座位信息
+       },
+       // 设施信息
+       infrastructureInfo:{
+           topIndex:0 ,// 设施顶部位于布局的第几格
+           leftIndex:0 ,// 设施左边部分位于布局的第几格
+           infrastructureWidth:0, //设施横向占多少格
+           infrastructureHeight:0,//设施纵向占多少格
+           infrastructureName: '',   // 设施名称
+           infrastructureOrientation:'' //设施朝（上下左右 依次 u d l r）默认朝上
+        },
+        // 座位信息
+        seatInfo:{
+           seatType:'',//座位类型（普通座位，主席座等）
+           rowIndex:0, //座位位于布局的第几行
+           colIndex:0, //座位位于布局的第几列
+           seatNo:'', //座位编号
+           seatLable:'' ,//座位文字显示信息（与座位号二者只能显示其中一个）
+           seatOrientation:''//座位朝向（上下左右 依次 u d l r）默认朝上
+        },
 
 
 

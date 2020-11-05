@@ -5,10 +5,10 @@
       <div class="btn-buy" @click="selModel">
         选择模型
       </div>
-      <div class="btn-buy" @click="addinfrastructure">
+      <div class="btn-buy" @click="addFacility">
         添加设施
     </div>
-    <div class="btn-buy" @click="addinfrastructure">
+    <div class="btn-buy" @click="addFacility">
         添加座位
     </div>
     <div class="group-btn">
@@ -23,26 +23,33 @@
           <!--这里的v-if很重要，如果没有则会导致报错，因为seatArray初始状态为空-->
           <div v-for="col in seatCol" :key="col" v-if="seatArray.length>0"
             class="square-block" :style="{width:seatSize+'px',height:seatSize+'px'}">
-                <seat :v-if="seatArray[row-1][col-1]!==0" :seatType='seatArray[row-1][col-1].toString()' seatOrientation='u'/>
+            <seat :v-if="seatArray[row-1][col-1]!==0"
+            :seatType='seatArray[row-1][col-1].toString()'
+            seatOrientation='u' seatLable="张三"/>
           </div>
         </div>
+        <!--座位-->
+        <!-- <seat :v-if="seatArray[row-1][col-1]!==0" :seatType='seatArray[row-1][col-1].toString()' seatOrientation='u' seatLable="张三"/> -->
 
-         <div>
-      <!--添加设施-->
-            <test/>
-         </div>
+       <!--设施-->
+        <facility/>
+        <!--div围墙-->
+        <div id='divBlock'></div>
       </div>
     </div>
-    <el-dialog title="选择模型" :visible.sync="dialogModelSelectVisible">
-      <el-form>
-        <el-form-item>
-        <img src="../assets/U.png" @click="next">
-        </el-form-item>
-      </el-form>
+    <el-dialog title="选择模型" :visible.sync="dialogModelSelectVisible"
+        :show-close="false" width="600px" :close-on-click-modal="false">
+      <el-row :gutter="20">
+        <el-col :span="6"><div class="grid-content bg-purple" > <img src="../assets/U.png" @click="nextModel('uShape')"/></div></el-col>
+        <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/huixing.png"  @click="nextModel('gyrationShape')"/></div></el-col>
+        <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/kezhuoxing.png"  @click="nextModel('deskShape')"/></div></el-col>
+        <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/zidingyixing.png"  @click="nextModel('customize')"/></div></el-col>
+      </el-row>
     </el-dialog>
-    <el-dialog title="编辑模型" :visible.sync="dialogModelInfoVisible">
+
+    <el-dialog title="编辑模型" :visible.sync="dialogModelInfoVisible" width="600px">
       <el-form>
-      <el-form-item label="U型方向">
+      <el-form-item label="U型方向" v-show="showSelOrientation">
         <!-- <el-input v-model="seatModelConfig.orientation"></el-input> -->
           <el-select v-model="seatModelConfig.orientation" placeholder="请选择">
             <el-option
@@ -59,29 +66,30 @@
         <el-form-item label="纵向座位数">
             <el-input v-model="seatModelConfig.seatColNum"></el-input>
       </el-form-item>
-        <el-form-item label="环数">
+        <!-- <el-form-item label="环数">
           <el-input-number v-model="seatModelConfig.circleNum" :min="1" :max="3" label="环数"></el-input-number>
         <!-- <el-input v-model="seatModelConfig.circleNum"></el-input> -->
-      </el-form-item>
+      <!--</el-form-item> -->
       </el-form>
     <div slot="footer" class="dialog-footer">
-      <el-button @click="up">上一步</el-button>
-      <el-button type="primary" @click="ok">确 定</el-button>
+      <el-button @click="upModel">上一步</el-button>
+      <el-button type="primary" @click="okModel">确 定</el-button>
     </div>
     </el-dialog>
-    <el-dialog title="选择设施" :visible.sync="dialoginfrastructureVisible">
+    <el-dialog title="选择设施" :visible.sync="dialogFacilityVisible"
+      width="600px">
       <el-row :gutter="20">
-      <el-col :span="4"><div class="grid-content bg-purple" > <img src="../assets/Rostrum.png" @click="addinfrastructure(1)"></div></el-col>
-      <el-col :span="4"><div class="grid-content bg-purple"> <img src="../assets/table.png"  @click="addinfrastructure(2)"></div></el-col>
-      <el-col :span="4"><div class="grid-content bg-purple"> <img src="../assets/meetingScreen.png"  @click="addinfrastructure(3)"></div></el-col>
-      <el-col :span="4"><div class="grid-content bg-purple"> <img src="../assets/indoor.png"  @click="addinfrastructure(4)"></div></el-col>
+      <el-col :span="6"><div class="grid-content bg-purple" > <img src="../assets/Rostrum.png" @click="nextFacility('rostrum')"></div></el-col>
+      <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/table.png"  @click="nextFacility('meetingTable')"></div></el-col>
+      <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/meetingScreen.png"  @click="nextFacility('meetingScreen')"></div></el-col>
+      <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/indoor.png"  @click="nextFacility('door')"></div></el-col>
     </el-row>
     </el-dialog>
-    <el-dialog title="添加设施" :visible.sync="dialogModelInfoVisible">
+    <el-dialog title="添加设施" :visible.sync="dialogFacilityDetailVisible">
       <el-form>
-      <el-form-item label="朝向">
+      <el-form-item label="设施朝向" v-if="showSelFacilityOrientation">
         <!-- <el-input v-model="seatModelConfig.orientation"></el-input> -->
-          <el-select v-model="seatModelConfig.orientation" placeholder="请选择">
+          <el-select v-model="facilityInfo.facilityOrientation" placeholder="请选择">
             <el-option
               v-for="item in orientations"
               :key="item.value"
@@ -90,32 +98,51 @@
             </el-option>
       </el-select>
       </el-form-item>
-      <el-form-item label="长">
-          <el-input v-model="seatModelConfig.seatRowNum"></el-input>
+      <el-form-item label="设施大小">
       </el-form-item>
-        <el-form-item label="宽">
-            <el-input v-model="seatModelConfig.seatColNum"></el-input>
+        <el-form-item label="设施长度">
+          <el-input v-model="facilityInfo.facilityWidth"></el-input>
       </el-form-item>
-        <el-form-item label="环数">
-          <el-input-number v-model="seatModelConfig.circleNum" :min="1" :max="3" label="环数"></el-input-number>
-        <!-- <el-input v-model="seatModelConfig.circleNum"></el-input> -->
+        <el-form-item label="设施高度">
+            <el-input v-model="facilityInfo.facilityHeight"></el-input>
+      </el-form-item>
+
+      <el-form-item label="座位数量"  v-if="showSelFacilityOrientation">
+         <el-input v-model="facilityInfo.holdSeatNum"></el-input>
       </el-form-item>
       </el-form>
     <div slot="footer" class="dialog-footer">
-      <el-button @click="up">上一步</el-button>
-      <el-button type="primary" @click="ok">确 定</el-button>
+      <el-button @click="upFacility">上一步</el-button>
+      <el-button type="primary" @click="okFacility">确 定</el-button>
     </div>
     </el-dialog>
+
   </div>
 </template>
 <script>
    import seat from './customComponents/seat.vue'
-   import test from './customComponents/test.vue'
+   import facility from './customComponents/facility.vue'
 	export default {
-    name: 'cinemaSeatChoose',
-   components:{
+    name: 'seatLayout',
+    components:{
       seat,
-      test
+      facility
+    },
+    // 监听属性
+    watch: {
+      firstName: function (val) {
+        this.fullName = val + ' ' + this.lastName;
+      },
+      lastName: function (val) {
+        this.fullName = this.firstName + ' ' + val;
+      },
+    },
+   // 计算属性
+    computed: {
+          reversedMessage: function () {
+            // `this` 指向 vm 实例
+            return this.message.split('').reverse().join('');
+      },
     },
 		data () {
 			return {
@@ -131,43 +158,50 @@
         seatCol:24,
         // 布局格子的大小
         seatSize:0,
-        //推荐选座最大数量
-        smartChooseMaxNum:5,
         // 模型选择对话框显示
         dialogModelSelectVisible :true,
-        //模型编辑兑换狂显示
+        //模型编辑对话框显示
         dialogModelInfoVisible :false,
         //添加设施对话框显示
-        dialoginfrastructureVisible:false ,
+        dialogFacilityVisible:false ,
+        //设施对话框显示
+        dialogFacilityDetailVisible:false,
+        //模型是否显示朝向选择
+        showSelOrientation:false,
+        //设施朝向设置是否显示
+        showSelFacilityOrientation:false,
+        // 设置设施座位数量显示
+        showHoldSeatNum:false,
        // 座位模板信息
        seatModelConfig : {
          modelName:'', // 模板名称
-         seatModelType:'',//座位模型('u-shape','gyration-shape','desk-shape,'customize')
+         seatModelType:'',//座位模型('uShape','gyrationShape','deskShape,'customize')
          seatColNum: 7 ,//横向座位数
-         seatRowNum:7,//纵向座位数:
-         orientation:'u',//朝向（上下左右 一次 u d l r）默认朝上
-         circleNum:3, // 有多少环，最多支持三环
-         infrastructures:[],//设备信息 infrastructureInfo
+         seatRowNum: 7,//纵向座位数:
+         orientation: 'u',//朝向（上下左右 一次 u d l r）默认朝上,u型以外的模型默认为空
+         circleNum: 1, // 有多少环，最多支持三环
+         facilitys:[],//设备信息 facilityInfo
          seats:[],// 座位信息
        },
        // 设施信息
-       infrastructureInfo:{
+       facilityInfo:{
            topIndex:0 ,// 设施顶部位于布局的第几格
            leftIndex:0 ,// 设施左边部分位于布局的第几格
-           infrastructureWidth:0, //设施横向占多少格
-           infrastructureHeight:0,//设施纵向占多少格
-           infrastructureName: '',   // 设施名称
-           infrastructureOrientation:'' //设施朝（上下左右 依次 u d l r）默认朝上
+           facilityWidth:0, //设施横向占多少格
+           facilityHeight:0,//设施纵向占多少格
+           facilityType: '',   // 设施名称 （主屏幕 mainscreen）
+           holdSeatNum:0,// 设施容纳的座位数量
+           facilityOrientation:'u' //设施朝（上下左右 依次 u d l r）默认朝上
         },
-        // 座位信息
-        seatInfo:{
-           seatType:'',//座位类型（普通座位，主席座等）
-           rowIndex:0, //座位位于布局的第几行
-           colIndex:0, //座位位于布局的第几列
-           seatNo:'', //座位编号
-           seatLable:'' ,//座位文字显示信息（与座位号二者只能显示其中一个）
-           seatOrientation:''//座位朝向（上下左右 依次 u d l r）默认朝上
-        },
+      //   // 座位信息
+      //   seatInfo:{
+      //      seatType:'',//座位类型（普通座位，主席座等）
+      //      rowIndex:0, //座位位于布局的第几行
+      //      colIndex:0, //座位位于布局的第几列
+      //      seatNo:'', //座位编号
+      //      seatLable:'' ,//座位文字显示信息（与座位号二者只能显示其中一个）
+      //      seatOrientation:''//座位朝向（上下左右 依次 u d l r）默认朝上
+      //   },
        // 朝向
        orientations: [{
                 value: 'u',
@@ -197,34 +231,83 @@
         this.enableDelete = true
       },
       // 模型选择
-      next:function(){
+      nextModel:function(type){
           // 选择模型 的对话框关闭
           this.dialogModelSelectVisible= false
-          this.seatModelConfig.seatModelType = 'u-shape'
+          this.seatModelConfig.seatModelType = type
+          // U 型 需要设置朝向
+          if(type==='uShape'){
+            this.showSelOrientation=true;
+          }else{
+              this.showSelOrientation=false;
+          }
+          // 不是自定义类型要弹出设置模型参数对话框
+          if(type!=='customize'){
           this.dialogModelInfoVisible =true
+          }
       },
       // 返回模型选择
-      up:function(){
+      upModel:function(){
           this.dialogModelInfoVisible =false
           this.dialogModelSelectVisible=true
       },
       //确定模型
-      ok:function(){
+      okModel:function(){
         //渲染座位
         this.renderSeat();
         //关闭对话框
         this.dialogModelInfoVisible=false
       },
+      // 返回设施选择
+      upFacility:function(){
+          this.dialogFacilityVisible =true
+          this.dialogFacilityDetailVisible=false
+      },
+      okFacility:function(){
+         //new 一个设施
+         //关闭设施设置对话框
+        this.dialogFacilityDetailVisible=false
+
+      },
+       // 设施选择
+      nextFacility:function(type){
+           // 选择设施 的对话框关闭
+          this.dialogFacilityVisible= false
+          this.seatModelConfig.seatModelType = type
+          // U 型 需要设置朝向
+          if(type==='rostrum'){
+            this.showHoldSeatNum=true;
+            this.showSelFacilityOrientation=true;
+          }else{
+            this.showHoldSeatNum=false;
+            this.showSelFacilityOrientation=false;
+          }
+          //弹出 设施参数设置对话框
+           this.dialogFacilityDetailVisible=true;
+      },
+
       //打开模型选择
       selModel:function(){
         this.resetSeat()
         this.dialogModelSelectVisible= true
 
       },
-      //添加设备
-      addinfrastructure:function(){
-         this.dialoginfrastructureVisible= true
+      //添加设施
+      addFacility:function(){
+         this.resetFacility();
+         this.dialogFacilityVisible= true
+         this.dialogFacilityDetailVisible=false
+      },
 
+      //重置设施属性
+      resetFacility:function(){
+        this.facilityInfo.topIndex=0;
+        this.facilityInfo.leftIndex=0;
+        this.facilityInfo.facilityWidth=0;
+        this.facilityInfo.facilityHeight=0;
+        this.facilityInfo.facilityType='';
+        this.facilityInfo.holdSeatNum=0;
+        this.facilityInfo.facilityOrientation='u';
       },
     	//重置座位
       resetSeat: function(){
@@ -261,6 +344,9 @@
         //环数2 则 横向位数 不能小于3 纵向不能小于5  且都不能大于20
         //环数3 则 横向位数 不能小于4 纵向不能小于7  且都不能大于20
         //校验逻辑也可以不写在这里直接 用rule 规则取校验
+
+        // 目前只考虑一个环
+        if( this.seatModelConfig.seatModelType==='uShape'){
         if(circleNum===1){
             //画环
             oldArray=this.hLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
@@ -288,9 +374,18 @@
             oldArray= this.uLayout(startRowIndex+1,startColIndex+1,seatColNum-2,seatRowNum-2,oldArray,orientation,2)
             // 去掉第三个环多余座位
             this.seatArray= this.uLayout(startRowIndex+2,startColIndex+2,seatColNum-4,seatRowNum-4,oldArray,orientation,3)
-       }else{
+        }else{
               alert('请设置环数小于等于三的正整数')
-      }
+       }
+        }else if( this.seatModelConfig.seatModelType==='gyrationShape'){
+          //回型
+            this.seatArray=this.hLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
+        }else if(this.seatModelConfig.seatModelType==='deskShape'){
+           //课桌型
+           this.seatArray=this.tableLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
+        }else{
+
+        }
        console.log(this.seatArray);
     },
 
@@ -401,6 +496,23 @@
           }
            return oldArray;
       },
+        /**
+       * 根据横向和纵向的座位数布局课桌型
+       * seatRowNum:横向座位数
+       * seatColNum:纵向座位数
+       * startRowIndex:左上角开始行位置
+       * startColIndex:左上角开始的列位置
+       * oldArray:需要标注画环的二维数组
+       * setValue:设置环位置的数组坐标占位符
+       */
+      tableLayout:function(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray,setValue=1){
+        for(let i=0;i<seatRowNum;i++){
+          for(let j=0;j<seatColNum;j++){
+                    oldArray[startRowIndex+i][startColIndex+j] = setValue
+           }
+        }
+       return oldArray;
+      },
 
       //初始座位数组
       initSeatArray: function(){
@@ -424,7 +536,8 @@
 
     mounted:function(){
       this.initSeatArray(this.seatRow,this.seatCol)
-    }
+    },
+
 
 }
 </script>
