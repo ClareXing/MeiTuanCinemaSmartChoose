@@ -8,7 +8,6 @@
 export default {
  props:['seatType','seatNo','seatLable','seatOrientation'],
 
-
  data(){
    return{
 
