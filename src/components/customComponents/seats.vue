@@ -1,9 +1,10 @@
 <template>
-<div :style="{width:rowSeats*blockSize,height:colSeats*blockSize}" class="drag" v-drag>
+<div :style="{width:rowSeats*gridSize,height:colSeats*gridSize,
+     top:gridSize*topIndex+'px',left:gridSize*leftIndex+'px'}" class="drag" >
      <!--根据相关参数画模型-->
-    <div v-for="(row,rowIndex) in rowSeats" :key="rowIndex"   >
-      <div v-for="(item,colIndex) in colSeats" :key="colIndex"   v-if="rectArray.length>0"
-        class="square-block" :style="{width:blockSize+'px',height:blockSize+'px'}">
+    <div v-for="(row,rowIndex) in rectArray" :key="rowIndex" >
+      <div v-for="(item,colIndex) in row" :key="colIndex"
+        class="square-block" :style="{width:gridSize+'px',height:gridSize+'px'}">
               <div v-if="rectArray[rowIndex][colIndex]!==-1" class="inner-seat"
                 :class="rectArray[rowIndex][colIndex]===1?'selected-seat':'unselected-seat'">
                </div>
@@ -18,51 +19,49 @@
 export default {
   /** 画模型 */
   props:{
-      blockSize:Number,//单元格大小
+      gridSize:Number,//单元格大小
       rowSeats:Number,//行座位数
       colSeats:Number,//列座位数
       modelType:String,//模型类型
-      orientations:String,//朝向
+      orientation:String,//朝向
       circleNum:Number,//环数
-      seatsArray:Array,//座位数组
-      reqType:String //请求类型 （1画模型，2复原座位，3小图）
+      topIndex:{
+        type:Number,
+        default:2
+      },
+      leftIndex:{
+        type:Number,
+        default:2
+      },
+      seatsArray:{type:Array,default:Array},//座位数组
+    //  reqType:String //请求类型 （1画模型，2复原座位，3小图）
   },
-  directives:{
-    drag(el){
-        el.onmousedown = function(e){
-          console.log(`e.pageX:${e.pageX },e.pageY:${e.pageY},el.offsetLeft:${el.offsetLeft},el.offsetTop:${el.offsetTop}`)
-            var disx = e.pageX - el.offsetLeft;//offsetLeft 初始位置左上偏移量
-            var disy = e.pageY - el.offsetTop;
-            document.onmousemove = function (e){
-                el.style.left = e.pageX - disx+'px';
-                el.style.top = e.pageY - disy+'px';
-            }
-            document.onmouseup = function(){
-                document.onmousemove = document.onmouseup = null;
-            }
-        }
-  }
-},
+  watch:{
+    // draggable:function(oldValue,newValue){
+    //     if(!newValue){
+
+    //     }
+    // }
+  },
+
   data(){
     return {
       rectArray:[],
     }
   },
-  methods:{
+   methods:{
       //渲染座位区域 目前只有U型
       renderSeat:function(){
         let seatColNum = this.colSeats
         let seatRowNum = this.rowSeats
-        let orientation = this.orientations
+        let orientation = this.orientation
         let circleNum =this.circleNum;
         //确定第一个环的左上开始位置(最外环为第一个环)
         let  startRowIndex = 0  // 根据布局大小计算环开始的行位置
         let startColIndex = 0  // 根据布局大小计算环开始的列位置
 
         let oldArray = this.rectArray.slice();
-
         //oldArray=this.hLayout(seatRowNum+4,seatColNum+4,startRowIndex-2,startColIndex-2,oldArray,2);
-
         // validate(); //校验逻辑
         //如果是U型
         //朝向上或者下
@@ -116,8 +115,7 @@ export default {
         }else{
 
         }
-        console.log(this.rectArray)
-    },
+     },
 
       /** 根据朝向 去掉环中多余的座位
        * seatRowNum:横向座位数
@@ -216,7 +214,6 @@ export default {
        * setValue:设置环位置的数组坐标占位符
        */
       hLayout:function(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray,setValue=1){
-         console.log('2')
            for(let i=0;i<seatRowNum-1;i++){
                 oldArray[startRowIndex+i][startColIndex] = setValue
                 oldArray[startRowIndex+i][startColIndex+seatColNum-1] = setValue
@@ -245,17 +242,21 @@ export default {
        return oldArray;
       },
 
-
       initRectArray: function(){
         //初始化布局
+        if(this.rowSeats){
         let rectArray = Array(this.rowSeats).fill(0).map(()=>Array(this.colSeats).fill(0));
         this.rectArray = rectArray;
-      },
-  },
+        }
 
+      },
+
+
+  },
   mounted(){
     this.initRectArray();
     this.renderSeat();
+    this.$emit('initSeatModelArray', this.rectArray)
   }
 
 }
@@ -283,8 +284,9 @@ export default {
       position: absolute;
       top: 0;
       left: 0;
+      pointer-events: none;
       /* background-size: cover; */
-      opacity: .6;
+      opacity: .5;
 }
   .inner-seat{
     width:100%;

@@ -10,54 +10,65 @@
         </el-input>
     </div>
     <div class="btn-wrapper">
-       <el-row :gutter="20">
+       <el-row :gutter="30">
              <el-col :span="2">  <el-button type="primary"  @click="selModel">选择模型</el-button></el-col>
              <el-col :span="2">  <el-button type="primary"  @click="addFacility">添加设施</el-button></el-col>
-             <el-col :span="2">  <el-button type="primary" @click="enableAddSeat=true">添加座位</el-button></el-col>
-             <el-col :span="15" class="el-col_empty"></el-col>
-             <el-col :span="3" >
-                <el-button-group>
-                  <el-button type="primary" icon="el-icon-edit" @click="edit"></el-button>
-                  <el-button type="primary" icon="el-icon-delete" @click="deleteSeat"></el-button>
-                </el-button-group>
-            </el-col>
+             <el-col :span="2">  <el-button  @click="addSeat" :type="!enableAddSeat?'primary' : ''">添加座位</el-button></el-col>
+             <el-col :span="2"><el-button type="primary" icon="el-icon-delete" @click="clearAll">清空全部</el-button></el-col>
+             <el-col :span="8" class="el-col_empty"></el-col>
+             <el-col :span="3" >  <span>点击的类型</span></el-col>
+             <el-col :span="2" > <el-button type="primary" icon="el-icon-edit" @click="edit">编辑</el-button></el-col>
+             <el-col :span="2" >  <el-button type="primary" icon="el-icon-delete" @click="deleteSeat">删除</el-button></el-col>
+            <el-col :span="1" class="el-col_empty"></el-col>
          </el-row>
      </div>
      <div class="seat-wrapper">
-        <div class="inner-seat-wrapper" ref="innerSeatWrapperRef"  >
-          <div v-for="(row,rowIndex) in rows" :key="rowIndex"   >
-                <!--这里的v-if很重要，如果没有则会导致报错，因为seatArray初始状态为空-->
-                <div v-for="(item,colIndex) in colums" :key="colIndex" :row="rowIndex" :col="colIndex"
-                  class="square-block" :style="{width:seatSize+'px',height:seatSize+'px'}">
+        <div class="inner-seat-wrapper" ref="innerSeatWrapperRef"  @click="click" @mousemove='mousemove'>
+          <!--模型布局-->
+          <div v-for="(row,rowIndex) in gridArray" :key="rowIndex">
+                <div v-for="(item,colIndex) in row" :key="colIndex"
+                  class="square-block" :style="{width:gridSize+'px',height:gridSize+'px'}">
+                      <div v-if="gridArray[rowIndex][colIndex]!==-1" class="inner-seat"
+                       :class="gridArray[rowIndex][colIndex]===1?'selected-seat':'unselected-seat'"
+                       :row="rowIndex" :column="colIndex" >
+                      </div>
                 </div>
           </div>
 
-         <seats :blockSize="parseInt(seatSize)" :circleNum="parseInt(seatModelConfig.circleNum)" :colSeats="parseInt(seatModelConfig.seatColNum)"
-         :rowSeats="parseInt(seatModelConfig.seatRowNum)" :modelType="seatModelConfig.seatModelType"
-          :orientations="seatModelConfig.orientation" v-if='enableDrag' ref="dragImgRef"></seats>
-          <!--座位-->
-          <!-- <seat :v-if="seatArray[row-1][col-1]!==0" :seatType='seatArray[row-1][col-1].toString()' seatOrientation='u' seatLable="张三"/> -->
-        <!-- <seat :v-if="seatArray[row-1][col-1]!==0"
-              :seatType='seatArray[row-1][col-1].toString()'
-              seatOrientation='u'
-              seatLable="张三"/> -->
-        <!--设施-->
-        <!-- <facility/> -->
-
-          <!-- <facility/> -->
-          <!--div围墙-->
-          <div class="divOuterBlock" :style="{width:blockWidth + 'px',
-                                            height:blockHeight+'px',
-                                            top:blockStartTop+'px',
-                                           left:blockStartLeft+'px',
-                                           border:(seatSize+10) +'px'+ ' red solid'}" v-if='enableEdit'>
+         <!--添加座位时的图片-->
+          <div v-show="enableAddSeat" ref="addSeatDivRef" id='addSeatDivRef'>
+            <img src="../assets/enableAddSeat.png" width="100%" height="100%"/>
           </div>
+
+          <!--可移动状态座位模型鼠标点击定位时消失-->
+          <seats @initSeatModelArray='initSeatModelArray' :type="seatModelConfig.seatModelType+'座位类型'"  ref="seatsRef"
+                :gridSize="parseInt(gridSize)"
+                :circleNum="parseInt(seatModelConfig.circleNum)"
+                :colSeats="parseInt(seatModelConfig.seatColNum)"
+                :rowSeats="parseInt(seatModelConfig.seatRowNum)"
+                :modelType="seatModelConfig.seatModelType"
+                :orientation="seatModelConfig.orientation" v-if="showDraggModel">
+            </seats>
+          <!--可移动设施-->
+          <facility  :type="'设施'" ref="facilityRef"
+           :gridSize="parseInt(gridSize)"
+           :topIndex="parseInt(facilityInfo.topIndex)"
+           :leftIndex="parseInt(facilityInfo.leftIndex)"
+           :facilityWidth="parseInt(facilityInfo.facilityWidth)"
+           :facilityHeight="parseInt(facilityInfo.facilityHeight)"
+           :facilityType="facilityInfo.facilityType"
+           :holdSeatNum="parseInt(facilityInfo.holdSeatNum)"
+           :facilityOrientation="facilityInfo.facilityOrientation"
+           v-if="showDraggFacility">
+           </facility>
+          <!--围墙-->
+           <!-- <wall ></wall> -->
         </div>
         </div>
 
        <div class ='footer-wrapper'>
         <el-button type="primary" @click="cancel">取消</el-button>
-          <el-button type="primary" @click="saveAndQuit">保存并退出</el-button>
+        <el-button type="primary" @click="saveAndQuit">保存并退出</el-button>
        </div>
         <el-dialog title="添加模型" :visible.sync="dialogModelSelectVisible"
             :show-close="false" width="600px" :close-on-click-modal="false">
@@ -72,8 +83,7 @@
 
         <el-dialog title="编辑模型" :visible.sync="dialogModelInfoVisible" width="600px" :close-on-click-modal="false">
           <el-form>
-                <el-form-item label="U型方向" v-show="showSelOrientation">
-                  <!-- <el-input v-model="seatModelConfig.orientation"></el-input> -->
+              <el-form-item label="U型方向" v-show="showSelOrientation">
                     <el-select v-model="seatModelConfig.orientation" placeholder="请选择">
                       <el-option
                         v-for="item in orientations"
@@ -84,10 +94,10 @@
                     </el-select>
                 </el-form-item>
                 <el-form-item label="横向座位数">
-                  <el-input v-model="seatModelConfig.seatRowNum"></el-input>
+                  <el-input-number v-model="seatModelConfig.seatRowNum" :min="1" :max="18" label="横向座位数"></el-input-number>
                 </el-form-item>
                 <el-form-item label="纵向座位数">
-                    <el-input v-model="seatModelConfig.seatColNum"></el-input>
+                    <el-input-number v-model="seatModelConfig.seatColNum" :min="1" :max="18" label="纵向座位数"></el-input-number>
                 </el-form-item>
                 <!-- <el-form-item label="环数">
                   <el-input-number v-model="seatModelConfig.circleNum" :min="1" :max="3" label="环数"></el-input-number>
@@ -103,10 +113,10 @@
         <el-dialog title="选择设施" :visible.sync="dialogFacilityVisible"
           width="600px" :close-on-click-modal="false"  :show-close="false" >
           <el-row :gutter="20">
-          <el-col :span="6"><div class="grid-content bg-purple" > <img src="../assets/Rostrum.png" @click="nextFacility('rostrum')"></div></el-col>
-          <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/table.png"  @click="nextFacility('meetingTable')"></div></el-col>
+          <el-col :span="6"><div class="grid-content bg-purple" > <img src="../assets/Rostrum.png" @click="nextFacility('Rostrum')"></div></el-col>
+          <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/table.png"  @click="nextFacility('table')"></div></el-col>
           <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/meetingScreen.png"  @click="nextFacility('meetingScreen')"></div></el-col>
-          <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/indoor.png"  @click="nextFacility('door')"></div></el-col>
+          <el-col :span="6"><div class="grid-content bg-purple"> <img src="../assets/indoor.png"  @click="nextFacility('indoor')"></div></el-col>
         </el-row>
         </el-dialog>
 
@@ -126,14 +136,13 @@
           <el-form-item label="设施大小">
           </el-form-item>
             <el-form-item label="设施长度">
-              <el-input v-model="facilityInfo.facilityWidth"></el-input>
+              <el-input-number v-model="facilityInfo.facilityWidth" :min="1" :max="18" label="设施长度"></el-input-number>
           </el-form-item>
             <el-form-item label="设施高度">
-                <el-input v-model="facilityInfo.facilityHeight"></el-input>
+             <el-input-number v-model="facilityInfo.facilityHeight" :min="1" :max="18" label="设施高度"></el-input-number>
           </el-form-item>
-
           <el-form-item label="座位数量"  v-if="showSelFacilityOrientation">
-            <el-input v-model="facilityInfo.holdSeatNum"></el-input>
+            <el-input-number v-model="facilityInfo.holdSeatNum" :min="1" :max="18" label="设施高度"></el-input-number>
           </el-form-item>
           </el-form>
         <div slot="footer" class="dialog-footer">
@@ -149,7 +158,7 @@
    import facility from './customComponents/facility.vue'
    import wall from './customComponents/wall.vue'
    import seats from  './customComponents/seats.vue'
-	export default {
+   export default {
     name: 'seatLayout',
     components:{
       seat,
@@ -163,28 +172,18 @@
     },
    // 计算属性
     computed: {
-        reversedMessage: function () {
-          // `this` 指向 vm 实例
-          return this.message.split('').reverse().join('');
-        },
-        // divOuterBlock:function(){
-        //    return {
 
-        //    }
-        // }
     },
 		data () {
 			return {
-        // 拖拽
-        enableDrag:false,
         // 围栏的长
-        blockWidth:0,
+        wallWidth:0,
         // 围栏的高
-        blockHeight:0,
+        wallHeight:0,
         // 围栏Left位置
-        blockStartLeft:0,
+        wallStartLeft:0,
         // 围栏Top位置
-        blockStartTop:0,
+        wallStartTop:0,
         // 是否可以添加座位
         enableAddSeat:false,
         // 座位模型是否可编辑
@@ -192,14 +191,13 @@
         // 座位设施是否可删除
         enableDelete:false,
         // 存储布局的格子二维数组
-        seatArray:[],
+        gridArray:[],
         // 布局行数
         rows:20,
         // 布局列数
         colums:24,
         // 布局格子的大小
-        seatSize:0,
-        test:false,
+        gridSize:0,
         // 模型选择对话框显示
         dialogModelSelectVisible :true,
         //模型编辑对话框显示
@@ -214,54 +212,55 @@
         showSelFacilityOrientation:false,
         // 设置设施座位数量显示
         showHoldSeatNum:false,
-       // 座位模板信息
+        // 可移动状态的模型显示
+        showDraggModel:false,
+        // 可移动状态的设施
+        showDraggFacility:false,
+       // 座位模型信息
        seatModelConfig : {
-         modelName:'', // 模板名称
+         modelName:'', // 模型名称
          seatModelType:'',//座位模型('uShape','gyrationShape','deskShape,'customize')
          seatColNum: 7 ,//横向座位数
          seatRowNum: 7,//纵向座位数:
          orientation: 'u',//朝向（上下左右 一次 u d l r）默认朝上,u型以外的模型默认为空
          circleNum: 1, // 有多少环，最多支持三环
-         facilities:[],//设备信息 facilityInfo
-         seats:[],// 座位信息
        },
+       //座位模型数组（临时的，当点击确定时将值赋给gridArray）
+       seatModelArray:[],
        // 设施信息
-       facilities:[],
+       facilities:[{}],
        facilityInfo:{
-           topIndex:0 ,// 设施顶部位于布局的第几格
-           leftIndex:0 ,// 设施左边部分位于布局的第几格
+           topIndex:2 ,// 设施顶部位于布局的第几格
+           leftIndex:2 ,// 设施左边部分位于布局的第几格
            facilityWidth:0, //设施横向占多少格
            facilityHeight:0,//设施纵向占多少格
-           facilityType: '',   // 设施名称 （主屏幕 mainscreen）
+           facilityType: '',   // 设施图片名称
            holdSeatNum:0,// 设施容纳的座位数量
            facilityOrientation:'u' //设施朝（上下左右 依次 u d l r）默认朝上
         },
-      //   // 座位信息
-       seats:[],
-      //   seatInfo:{
-      //      seatType:'',//座位类型（普通座位，主席座等）
-      //      rowIndex:0, //座位位于布局的第几行
-      //      colIndex:0, //座位位于布局的第几列
-      //      seatNo:'', //座位编号
-      //      seatLable:'' ,//座位文字显示信息（与座位号二者只能显示其中一个）
-      //      seatOrientation:''//座位朝向（上下左右 依次 u d l r）默认朝上
-      //   },
-       // 朝向
-       orientations: [{
-                value: 'u',
-                label: '向上'
-              }, {
-                value: 'd',
-                label: '向下'
-              }, {
-                value: 'l',
-                label: '向左'
-              }, {
-                value: 'r',
-                label: '向右'
-              }],
-              value: ''
-			}
+       // 围墙
+          wall:{
+            topIndex:0,
+            leftIndex:0,
+            wallWidth:0,//围墙长度
+            wallHeight:0,//围墙宽度
+          },
+          // 朝向
+          orientations: [{
+                  value: 'u',
+                  label: '向上'
+                }, {
+                  value: 'd',
+                  label: '向下'
+                }, {
+                  value: 'l',
+                  label: '向左'
+                }, {
+                  value: 'r',
+                  label: '向右'
+                }],
+                value: ''
+        }
     },
 
     methods:{
@@ -270,28 +269,27 @@
         this.enableEdit =true
         this.enableDelete =false
 
-                // 围栏的长
-        this.blockWidth=100,
-        // 围栏的高
-        this.blockHeight=200,
-        // 围栏Left位置
-        this.blockStartLeft=0,
-        // 围栏Top位置
-        this.blockStartTop=20
-
       },
       // 座位删除
       deleteSeat:function(){
-        this.enableEdit = true
+        this.enableEdit = false
         this.enableDelete = false
-                    // 围栏的长
-        this.blockWidth=200,
-        // 围栏的高
-        this.blockHeight=200,
-        // 围栏Left位置
-        this.blockStartLeft=200,
-        // 围栏Top位置
-        this.blockStartTop=20
+      },
+      //删除座位模型
+      deleteSeatsModel:function(index){
+        if (index !== 0) {
+            this.seatsModel.splice(index, 1)
+        }
+      },
+      //删除设施
+      deleteFacilitiy:function(index){
+         if(index!==0){
+            this.seatsModel.splice(index,1)
+         }
+      },
+      // 计算围墙
+      computeWall:function(){
+
       },
       // 模型选择
       nextModel:function(type){
@@ -316,30 +314,32 @@
       },
       //确定模型
       okModel:function(){
-        //渲染座位
-        this.renderSeat();
         //关闭对话框
+        this.showDraggModel= true
         this.dialogModelInfoVisible=false
-        this.enableDrag =true;
       },
+
       // 返回设施选择
       upFacility:function(){
           this.dialogFacilityVisible =true
           this.dialogFacilityDetailVisible=false
       },
+      // 确定添加设施
       okFacility:function(){
          //new 一个设施
          //关闭设施设置对话框
         this.dialogFacilityDetailVisible=false
+        this.showDraggFacility=true
 
       },
        // 设施选择
       nextFacility:function(type){
            // 选择设施 的对话框关闭
           this.dialogFacilityVisible= false
-          this.seatModelConfig.seatModelType = type
+          // this.seatModelConfig.seatModelType = type
+          this.facilityInfo.facilityType = type+'.png'
           // U 型 需要设置朝向
-          if(type==='rostrum'){
+          if(type==='Rostrum'){
             this.showHoldSeatNum=true;
             this.showSelFacilityOrientation=true;
           }else{
@@ -350,23 +350,39 @@
            this.dialogFacilityDetailVisible=true;
       },
 
-      //打开模型选择
+      // 打开模型选择
       selModel:function(){
-        this.resetSeat()
+        // this.resetSeat()
         this.dialogModelSelectVisible= true
 
       },
-      //添加设施
+      // 添加设施
       addFacility:function(){
-         this.resetFacility();
-         this.enableDrag =true;
          this.dialogFacilityVisible= true
          this.dialogFacilityDetailVisible=false
       },
-      addSeats:function(){
+      // 添加单个座位
+      addSeat:function(){
+        this.enableAddSeat = true
+      },
+      handleSeatClick:function(){
 
       },
+       // 清空全部
+      clearAll:function(){
+          this.$confirm('此操作将清空当前画布全部内容，是否继续?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }).then(() => {
+            //点击确定的操作  清空画布
+            this. resetSeat();
+            this.facilities=[];
+          }).catch(() => {
+            //几点取消的提示
+          });
 
+      },
       //重置设施属性
       resetFacility:function(){
         this.facilityInfo.topIndex=0;
@@ -380,291 +396,115 @@
     	//重置座位
       resetSeat: function(){
         //将所有座位的值变为0
-        let oldArray = this.seatArray.slice();
+        let oldArray = this.gridArray.slice();
         for(let i=0;i<this.rows;i++){
           for(let j=0;j<this.colums;j++){
               oldArray[i][j]=0
           }
         }
-        this.seatArray = oldArray;
+        this.gridArray = oldArray;
       },
       //取消模型
       cancel:function(){
 
       },
-
       //保存并退出
       saveAndQuit:function(){
 
       },
-
-      //渲染座位区域 目前只有U型
-      renderSeat:function(){
-        let seatColNum = parseInt(this.seatModelConfig.seatColNum);
-        let seatRowNum = parseInt(this.seatModelConfig.seatRowNum);
-        let orientation = this.seatModelConfig.orientation;
-        let circleNum =parseInt(this.seatModelConfig.circleNum);
-        //确定第一个环的左上开始位置(最外环为第一个环)
-        let  startRowIndex = Math.ceil(this.rows/2)-Math.ceil(seatRowNum /2)  // 根据布局大小计算环开始的行位置
-        let startColIndex = Math.ceil(this.colums/2)-Math.ceil(seatColNum /2)  // 根据布局大小计算环开始的列位置
-
-        let oldArray = this.seatArray.slice();
-        oldArray=this.hLayout(seatRowNum+4,seatColNum+4,startRowIndex-2,startColIndex-2,oldArray,2);
-
-        // validate(); //校验逻辑
-        //如果是U型
-        //朝向上或者下
-        //环数1 则 横向位数 不能小于3 纵向不能小于2  且都不能大于20
-        //环数2 则 横向位数 不能小于5 纵向不能小于3  且都不能大于20
-        //环数3 则 横向位数 不能小于7 纵向不能小于4  且都不能大于20
-        //朝向左或者右
-        //环数1 则 横向位数 不能小于2 纵向不能小于3  且都不能大于20
-        //环数2 则 横向位数 不能小于3 纵向不能小于5  且都不能大于20
-        //环数3 则 横向位数 不能小于4 纵向不能小于7  且都不能大于20
-        //校验逻辑也可以不写在这里直接 用rule 规则取校验
-        // 目前只考虑一个环
-        if( this.seatModelConfig.seatModelType==='uShape'){
-
-        if(circleNum===1){
-            //画环
-            oldArray=this.hLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
-            //根据方向去掉多余的座位
-            this.seatArray= this.uLayout(startRowIndex,startColIndex,seatColNum,seatRowNum,oldArray,orientation)
-        }else if(circleNum===2){
-            // 画第一个环
-            oldArray=this.hLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
-            //画第二个环
-            oldArray= this.hLayout(seatRowNum-2,seatColNum-2,startRowIndex+1,startColIndex+1,oldArray);
-            // 去掉第一个环多余座位
-            oldArray= this.uLayout(startRowIndex,startColIndex,seatColNum,seatRowNum,oldArray,orientation)
-            // 去掉第二个环多余座位
-            this.seatArray= this.uLayout(startRowIndex+1,startColIndex+1,seatColNum-2,seatRowNum-2,oldArray,orientation,2)
-        }else if(circleNum===3){
-            // 画第一个环
-            oldArray=this.hLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
-            //画第二个环
-            oldArray= this.hLayout(seatRowNum-2,seatColNum-2,startRowIndex+1,startColIndex+1,oldArray);
-            // 画第三个环
-            oldArray= this.hLayout(seatRowNum-4,seatColNum-4,startRowIndex+2,startColIndex+2,oldArray);
-            // 去掉第一个环多余座位
-            oldArray= this.uLayout(startRowIndex,startColIndex,seatColNum,seatRowNum,oldArray,orientation)
-            // 去掉第二个环多余座位
-            oldArray= this.uLayout(startRowIndex+1,startColIndex+1,seatColNum-2,seatRowNum-2,oldArray,orientation,2)
-            // 去掉第三个环多余座位
-            this.seatArray= this.uLayout(startRowIndex+2,startColIndex+2,seatColNum-4,seatRowNum-4,oldArray,orientation,3)
-        }else{
-              alert('请设置环数小于等于三的正整数')
-       }
-
-        }else if( this.seatModelConfig.seatModelType==='gyrationShape'){
-          //回型
-            this.seatArray=this.hLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
-        }else if(this.seatModelConfig.seatModelType==='deskShape'){
-           //课桌型
-           this.seatArray=this.tableLayout(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray);
-        }else{
-
-        }
-       console.log(this.seatArray);
-    },
-
-      /** 根据朝向 去掉环中多余的座位
-       * seatRowNum:横向座位数
-       * seatColNum:纵向座位数
-       * startRowIndex:左上角开始行位置
-       * startColIndex:左上角开始的列位置
-       * oldArray:需要标注画环的二维数组
-       * orientation:朝向
-       * circleNum:当前处理第几个环（从外到里依次1、2、3）
-       */
-      uLayout:function(startRowIndex,startColIndex,seatColNum,seatRowNum,oldArray,orientation,circleNum=1){
-         //向上
-         if(orientation==='u'){
-            for(let i=1;i<seatColNum-1;i++){
-                oldArray[startRowIndex][startColIndex+i] = 0
-            }
-            oldArray[startRowIndex+seatRowNum-1][startColIndex]=0
-            oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum-1]=0
-            if(circleNum===2){
-              oldArray[startRowIndex-1][startColIndex] = 1
-              oldArray[startRowIndex-1][startColIndex+seatColNum-1] = 1
-            }else if(circleNum===3){
-              oldArray[startRowIndex-1][startColIndex] = 1
-              oldArray[startRowIndex-1][startColIndex+seatColNum-1] = 1
-              oldArray[startRowIndex-2][startColIndex] = 1
-              oldArray[startRowIndex-2][startColIndex+seatColNum-1] = 1
-            }
-            return oldArray;
-         }else if(orientation==='d'){
-            //向下
-            for(let i=1;i<seatColNum-1;i++){
-              oldArray[startRowIndex+seatRowNum-1][startColIndex+i] = 0
-            }
-            oldArray[startRowIndex][startColIndex]=0
-            oldArray[startRowIndex][startColIndex+seatColNum-1]=0
-
-             if(circleNum===2){
-              oldArray[startRowIndex+seatRowNum][startColIndex] = 1
-              oldArray[startRowIndex+seatRowNum][startColIndex+seatColNum-1] = 1
-            }else if(circleNum===3){
-              oldArray[startRowIndex+seatRowNum][startColIndex] = 1
-              oldArray[startRowIndex+seatRowNum][startColIndex+seatColNum-1] = 1
-              oldArray[startRowIndex+seatRowNum+1][startColIndex] = 1
-              oldArray[startRowIndex+seatRowNum+1][startColIndex+seatColNum-1] = 1
-            }
-            return oldArray;
-         }else if(orientation==='l'){
-            //向左
-            for(let i=1;i<seatRowNum-1;i++){
-                oldArray[startRowIndex+i][startColIndex] = 0
-            }
-            oldArray[startRowIndex][startColIndex+seatColNum-1]=0
-            oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum-1]=0
-
-            if(circleNum===2){
-              oldArray[startRowIndex][startColIndex-1] = 1
-              oldArray[startRowIndex+seatRowNum-1][startColIndex-1] = 1
-            }else if(circleNum===3){
-              oldArray[startRowIndex][startColIndex-1] = 1
-              oldArray[startRowIndex+seatRowNum-1][startColIndex-1] = 1
-              oldArray[startRowIndex][startColIndex-2] = 1
-              oldArray[startRowIndex+seatRowNum-1][startColIndex-2] = 1
-            }
-            return oldArray;
-         }else if(orientation==='r'){
-            //向右
-            for(let i=1;i<seatRowNum-1;i++){
-                oldArray[startRowIndex+i][startColIndex+seatColNum-1] = 0
-            }
-            oldArray[startRowIndex][startColIndex]=0
-            oldArray[startRowIndex+seatRowNum-1][startColIndex]=0
-
-             if(circleNum===2){
-              oldArray[startRowIndex][startColIndex+seatColNum] = 1
-              oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum] = 1
-            }else if(circleNum===3){
-              oldArray[startRowIndex][startColIndex+seatColNum] = 1
-              oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum] = 1
-              oldArray[startRowIndex][startColIndex+seatColNum+1] = 1
-              oldArray[startRowIndex+seatRowNum-1][startColIndex+seatColNum+1] = 1
-            }
-            return oldArray;
-         }else{
-           console.error('选择正确的朝向');
-         }
-
+      // 添加座位模型时模型数组
+      initSeatModelArray:function(arr){
+         this.seatModelArray = arr;
       },
-
-      /**
-       * 根据横向和纵向的座位数画环
-       * seatRowNum:横向座位数
-       * seatColNum:纵向座位数
-       * startRowIndex:左上角开始行位置
-       * startColIndex:左上角开始的列位置
-       * oldArray:需要标注画环的二维数组
-       * setValue:设置环位置的数组坐标占位符
-       */
-      hLayout:function(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray,setValue=1){
-           for(let i=0;i<seatRowNum-1;i++){
-                oldArray[startRowIndex+i][startColIndex] = setValue
-                oldArray[startRowIndex+i][startColIndex+seatColNum-1] = setValue
-            }
-          for(let j=0;j<seatColNum;j++){
-               oldArray[startRowIndex+seatRowNum-1][startColIndex+j] = setValue
-               oldArray[startRowIndex][startColIndex+j] = setValue
-          }
-           return oldArray;
-      },
-        /**
-       * 根据横向和纵向的座位数布局课桌型
-       * seatRowNum:横向座位数
-       * seatColNum:纵向座位数
-       * startRowIndex:左上角开始行位置
-       * startColIndex:左上角开始的列位置
-       * oldArray:需要标注画环的二维数组
-       * setValue:设置环位置的数组坐标占位符
-       */
-      tableLayout:function(seatRowNum,seatColNum,startRowIndex,startColIndex,oldArray,setValue=1){
-        for(let i=0;i<seatRowNum;i++){
-          for(let j=0;j<seatColNum;j++){
-                    oldArray[startRowIndex+i][startColIndex+j] = setValue
-           }
-        }
-       return oldArray;
-      },
-
 
       //鼠标事件
       //鼠标移动事件
-       mousemove(e) {
-         //添加设备或者座位时可以移动
-         console.log(e)
-         if(this.enableDrag ){
-            // let width = (this.seatModelConfig.seatRowNum* this.seatSize)
-            // let height = (this.seatModelConfig.seatColNum * this.seatSize)
+     mousemove(e) {
+       // 座位模型
+      if(this.$refs.seatsRef){
+          let width = (this.seatModelConfig.seatRowNum* this.gridSize)
+          let height = (this.seatModelConfig.seatColNum * this.gridSize)
+          let left = e.target.offsetLeft-10-height/2
+          let top = e.target.offsetTop -width/2
+          let style = `left: ${left}px;top: ${top}px;width:${width+10*this.seatModelConfig.seatRowNum}px;height:${height+10*this.seatModelConfig.seatColNum}px`
+          this.$refs.seatsRef.$el.style=style
+        }
+        // 设施
+        if(this.$refs.facilityRef){
+          let width = (this.facilityInfo.facilityWidth* this.gridSize)
+          let height = (this.facilityInfo.facilityHeight* this.gridSize)
+          let left = e.target.offsetLeft-10-height/2
+          let top = e.target.offsetTop -width/2
+          let style = `left: ${left}px;top: ${top}px;width:${width+10*this.seatModelConfig.seatRowNum}px;height:${height+10*this.seatModelConfig.seatColNum}px`
+          this.$refs.facilityRef.$el.style=style
+        }
+        //添加单个座位
+        if(this.enableAddSeat){
+            let row = e.target.getAttribute('row')
+            if (!row) {
+                return
+            }
+            let top = e.target.offsetTop
+             let left = e.target.offsetLeft
+            let style = `left: ${left}px;top: ${top}px;width:${this.gridSize}px;height:${this.gridSize}`
+             this.$refs.addSeatDivRef.style=style;
 
-            // console.log( e.clientX,this.$refs.innerSeatWrapperRef.offsetLeft )
-            // console.log(e.clientY ,this.$refs.innerSeatWrapperRef.offsetTop )
-            let left = e.clientX - this.$refs.innerSeatWrapperRef.offsetLeft //- parseInt(width / 2)
-            let top = e.clientY - this.$refs.innerSeatWrapperRef.offsetTop //- parseInt(height / 2)
-            let style = `left: ${left}px;top: ${top}px` //;width: ${width}px;height: ${height}px;
-            this.$refs.dragImgRef.$el.style = style
-         }
-       },
+
+        }
+      },
        //鼠标按下事件
-    // click(e) {
-    //         console.log(111);
-    //         console.log(e)
-    //         if (this.enableDrag) {
-    //             console.log(e.target.offsetLeft)
-    //             let row = e.target.getAttribute('row')
-    //             if (!row) {
-    //                 return
-    //             }
-    //             let column = e.target.getAttribute('column')
-    //             for (let i = row - parseInt(this.facility.width / 2); i < parseInt(this.facility.width) - 1; i++) {
-    //                 for (let j = column - parseInt(this.facility.height / 2); j < parseInt(this.facility.height) - 1; j++) {
-    //                     this.area[i][j].type = 2
-    //                     this.area[i][j].width = this.facility.width
-    //                     this.area[i][j].height = this.facility.height
-    //                 }
+      click(e) {
+          //如果有可以拖动的设备或者模型点击后 确定位置取消拖拽状态
+          if(this.showDraggModel){
+            //判断点击的位置是否在格子上
+            let row = e.target.getAttribute('row')
+            if (!row) {
+                return
+            }
+            let column = e.target.getAttribute('column')
+            //计算开始位置
+             let topIndex= row-Math.floor(this.seatModelConfig.seatRowNum/2)
+             let leftIndex= column-Math.floor(this.seatModelConfig.seatColNum/2)
+             //如果是座位
+            for(let i=0;i<this.seatModelConfig.seatRowNum;i++){
+             for(let j=0;j<this.seatModelConfig.seatColNum;j++){
+               this.gridArray[i+topIndex][j+leftIndex]= this.seatModelArray[i][j];
+              }
+            }
+            //如果添加的是设备
+            this.showDraggModel= false
+          }
+          // 如果有可拖拽的设备
+          if(this.showDraggFacility){
+            this.showDraggFacility=false
+          }
 
-    //             }
-    //             console.log(this.area)
-    //             // 创造图片
-    //             let width = parseInt(this.facility.width) * this.interval
-    //             let height = parseInt(this.facility.height) * this.interval
-    //             let ele = document.createElement('img')
-    //             let div = document.createElement('div')
-    //             ele.setAttribute('src', imgUrl)
-    //             let style = `width: 100%;height: 100%;`
-    //             ele.style = style;
-    //             let divstyle = `left: ${e.target.offsetLeft - 1 - parseInt(this.facility.width/2) * this.interval}px;top: ${e.target.offsetTop - 1 - parseInt(this.facility.height/2) * this.interval}}px;
-    //             width: ${width}px;height: ${height}px;position: absolute;z-index: 2000;background: yellow`
-    //             div.style = divstyle;
-    //             div.append(ele)
-    //             this.$refs.box.append(div)
-    //             this.$nextTick(() => {
-    //                 this.dragImg = false
-    //                 this.initialize = false
-    //             })
-    //         }
-    //     },
+          // 如果是添加座位
+          if(this.enableAddSeat){
+            let row = e.target.getAttribute('row')
+            if (!row) {
+                return
+            }
+            let column = e.target.getAttribute('column')
+            console.log(this.gridArray[row][column])
+            this.gridArray[row][column] = '1';
+                        console.log(this.gridArray[row][column])
+          }
+       },
 
       //初始座位数组
       initSeatArray: function(){
         //初始化布局
-        let seatArray = Array(this.rows).fill(0).map(()=>Array(this.colums).fill(0));
-        this.seatArray = seatArray;
+        let gridArray = Array(this.rows).fill(0).map(()=>Array(this.colums).fill(0));
+        this.gridArray = gridArray;
         // 计算每个格子的尺寸  （画布的长度-（横向格子数+1）*（margin-left+margin-right））/横向格子数
-        this.seatSize=parseInt(window.getComputedStyle(this.$refs.innerSeatWrapperRef).width)/this.colums-10;
+        this.gridSize=parseInt(window.getComputedStyle(this.$refs.innerSeatWrapperRef).width)/this.colums-10;
       },
     },
 
     mounted() {
       this.initSeatArray();
     },
-
 
 }
 </script>
@@ -688,7 +528,6 @@
     .vue-input /deep/.el-input{
     width: 280px;
     }
-
 
 .btn-wrapper{
     width:1221px;
@@ -740,10 +579,18 @@
     min-height:1px;
   }
 
-.dragImg {
-    position: absolute;
-    pointer-events: none;
-    background: red;
-    opacity: .6;
-}
+    .inner-seat{
+    width:100%;
+    height:100%;
+    cursor: pointer;
+  }
+ .selected-seat{
+    background: url('../assets/selected.png') center center no-repeat;
+    background-size: 100% 100%;
+        line-height: 42px;
+  }
+  .unselected-seat{
+    background-size: 100% 100%;
+  }
+
 </style>
