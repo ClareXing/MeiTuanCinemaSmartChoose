@@ -2,7 +2,7 @@
   <div  class="drag" :style="{width:facilityWidth*gridSize+'px',
                             height:facilityHeight*gridSize+'px',
      top:gridSize*topIndex+'px',left:gridSize*leftIndex+'px'}">
-     <img :src="picPath" width="100%" height="100%">
+     <img :src="imgSrc"  width="100%" height= "100%" >
   </div>
 </template>
 
@@ -29,18 +29,17 @@ export default {
   },
 data () {
   return {
-      picPath:'',
+      imgSrc:'',
   }
 },
 methods: {
-        test:function(){
-           this.picPath= require("../../assets/" +this.facilityType)
-        }
+        // 初始化图片路径
+        initImgSrc:function(){
+           this.imgSrc= require("../../assets/" +this.facilityType)
+        },
    },
-
   mounted(){
-    this.test()
-    // this.$emit('initSeatModelArray', this.rectArray)
+    this.initImgSrc();
   }
 }
 </script>
@@ -52,4 +51,5 @@ methods: {
     background: #fff;
     opacity: .6;
 }
+
 </style>
