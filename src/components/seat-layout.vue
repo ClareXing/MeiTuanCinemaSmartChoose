@@ -31,9 +31,18 @@
                       <div v-if="gridArray[rowIndex][colIndex].type!==-1" class="inner-seat"
                        :class="gridArray[rowIndex][colIndex].type===1?'selected-seat':'unselected-seat'"
                        :row="rowIndex" :column="colIndex" >
+                       {{gridArray[rowIndex][colIndex].type}}
                       </div>
                 </div>
           </div>
+          <!--设施-->
+        <div v-for="(facility,index) in seatTemplate.facilities" :key="index+'20000'"
+            :style="{width:facility.facilityWidth*(gridSize+doubbleBorder)+'px',
+                 height:facility.facilityHeight*(gridSize+doubbleBorder)+'px',
+                 top:(gridSize+doubbleBorder)*facility.topIndex+'px',
+                 left:(gridSize+doubbleBorder)*facility.leftIndex+'px'}" class="div-facility">
+            <img :src="require('../assets/'+facility.facilityType)"  width="100%" height= "100%" >
+        </div>
 
          <div class='edit-form'>
            <el-card class="box-card">
@@ -83,7 +92,7 @@
                 :modelType="seatModelInfo.seatModelType"
                 :orientation="seatModelInfo.orientation" v-if="showDraggModel">
             </seats>
-          <!--可移动设施-->
+          <!--可移动设施时显示-->
           <facility :type="'设施'" ref="facilityRef"
            :gridSize="parseInt(gridSize)"
            :topIndex="parseInt(facilityInfo.topIndex)"
@@ -118,28 +127,52 @@
         </el-dialog>
 
         <el-dialog title="编辑模型" :visible.sync="dialogModelInfoVisible" width="600px" :close-on-click-modal="false">
-          <el-form>
-              <el-form-item label="U型方向" v-show="showSelOrientation">
-                    <el-select v-model="seatModelInfo.orientation" placeholder="请选择">
-                      <el-option
-                        v-for="item in orientations"
-                        :key="item.value"
-                        :label="item.label"
-                        :value="item.value">
-                      </el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="横向座位数">
-                  <el-input-number v-model="seatModelInfo.horizontalSeatNum" :min="1" :max="18" label="横向座位数"></el-input-number>
-                </el-form-item>
-                <el-form-item label="纵向座位数">
-                    <el-input-number v-model="seatModelInfo.verticalSeatNum" :min="1" :max="18" label="纵向座位数"></el-input-number>
-                </el-form-item>
-                <!-- <el-form-item label="环数">
-                  <el-input-number v-model="seatModelInfo.circleNum" :min="1" :max="3" label="环数"></el-input-number>
-                <!-- <el-input v-model="seatModelInfo.circleNum"></el-input> -->
-              <!--</el-form-item> -->
-          </el-form>
+            <el-row>
+               <el-col :span="14">
+                  <el-form>
+
+                   <el-form-item label="U型方向" v-show="showSelOrientation">
+                        <el-select v-model="seatModelInfo.orientation" placeholder="请选择">
+                          <el-option
+                            v-for="item in orientations"
+                            :key="item.value"
+                            :label="item.label"
+                            :value="item.value">
+                          </el-option>
+                        </el-select>
+                    </el-form-item>
+
+                    <el-form-item label="横向座位数">
+                      <el-input-number v-model="seatModelInfo.horizontalSeatNum" :min="1" :max="13" label="横向座位数"></el-input-number>
+                    </el-form-item>
+
+                    <el-form-item label="纵向座位数">
+                        <el-input-number v-model="seatModelInfo.verticalSeatNum" :min="1" :max="13" label="纵向座位数"></el-input-number>
+                    </el-form-item>
+                    <!-- <el-form-item label="环数">
+                      <el-input-number v-model="seatModelInfo.circleNum" :min="1" :max="3" label="环数"></el-input-number>
+                    <!-- <el-input v-model="seatModelInfo.circleNum"></el-input> -->
+                  <!--</el-form-item> -->
+
+              <!--模型预览-->
+
+              </el-form>
+           </el-col>
+                <el-col :span="10">
+                  <div style="text-align:center;">
+                      <seats  v-model="seatModelInfo"
+                      :gridSize="4"
+                      :circleNum="parseInt(seatModelInfo.circleNum)"
+                      :seatModelArrayHeight="parseInt(seatModelArrayHeight)"
+                      :seatModelArrayWidth="parseInt(seatModelArrayWidth)"
+                      :modelType="seatModelInfo.seatModelType"
+                      :orientation="seatModelInfo.orientation"
+                      :reqType="2">
+                        </seats>
+                           </div>
+                  </el-col>
+
+            </el-row>
             <div slot="footer" class="dialog-footer">
               <el-button @click="upModel">上一步</el-button>
               <el-button type="primary" @click="okModel">确 定</el-button>
@@ -156,10 +189,8 @@
         </el-row>
         </el-dialog>
 
-        <el-dialog title="添加设施" :visible.sync="dialogFacilityDetailVisible" :close-on-click-modal="false" >
+        <el-dialog title="添加设施" :visible.sync="dialogFacilityDetailVisible" :close-on-click-modal="false" width="600px">
           <el-form>
-            <el-row>
-              <el-col :span=16>
             <el-form-item label="设施朝向" v-if="showSelFacilityOrientation">
               <!-- <el-input v-model="seatModelInfo.orientation"></el-input> -->
                 <el-select v-model="facilityInfo.facilityOrientation" placeholder="请选择">
@@ -182,19 +213,6 @@
             <el-form-item label="座位数量"  v-if="showSelFacilityOrientation">
               <el-input-number v-model="facilityInfo.holdSeatNum" :min="1" :max="18" label="设施高度"></el-input-number>
             </el-form-item>
-           </el-col>
-           <!--模型预览-->
-            <el-col>
-                  <seats
-                gridSize="5"
-                :circleNum="parseInt(seatModelInfo.circleNum)"
-                :seatModelArrayHeight="parseInt(seatModelArrayHeight)"
-                :seatModelArrayWidth="parseInt(seatModelArrayWidth)"
-                :modelType="seatModelInfo.seatModelType"
-                :orientation="seatModelInfo.orientation">
-                   </seats>
-            </el-col>
-            </el-row>
           </el-form>
 
         <div slot="footer" class="dialog-footer">
@@ -270,6 +288,8 @@
         maskStyle: null,
         // 座位编辑div 显示
         editDivStyle:null,
+        //网格的左+右边框宽度
+        doubbleBorder:10,
         // 是否可以添加座位
         enableAddSeat:false,
         // 座位模型是否可编辑
@@ -497,7 +517,7 @@
           }).then(() => {
             //点击确定的操作  清空画布
             this. resetSeat();
-            this.facilities=[];
+            this.seatTemplate.facilities=[];
           }).catch(() => {
             //点取消的提示
           });
@@ -544,18 +564,18 @@
       if(this.$refs.seatsRef){
           let width = (this.seatModelArrayWidth* this.gridSize)
           let height = (this.seatModelArrayHeight * this.gridSize)
-          let left = e.target.offsetLeft-10-height/2
-          let top = e.target.offsetTop -width/2
-          let style = `left: ${left}px;top: ${top}px;width:${width+10*this.seatModelArrayWidth}px;height:${height+10*this.seatModelArrayHeight}px`
+          let left = e.target.offsetLeft -width/2
+          let top = e.target.offsetTop -height/2
+          let style = `left: ${left}px;top: ${top}px;width:${width+this.doubbleBorder*this.seatModelArrayWidth}px;height:${height+this.doubbleBorder*this.seatModelArrayHeight}px`
           this.$refs.seatsRef.$el.style=style
         }
         // 设施
         if(this.$refs.facilityRef){
           let width = (this.facilityInfo.facilityWidth* this.gridSize)
           let height = (this.facilityInfo.facilityHeight* this.gridSize)
-          let left = e.target.offsetLeft-10-height/2
-          let top = e.target.offsetTop -width/2
-          let style = `left: ${left}px;top: ${top}px;width:${width+10*(this.seatModelInfo.horizontalSeatNum-1)}px;height:${height+10*(this.seatModelInfo.verticalSeatNum-1)}px`
+          let left = e.target.offsetLeft-width/2
+          let top = e.target.offsetTop -height/2
+          let style = `left: ${left}px;top: ${top}px;width:${width+this.doubbleBorder*(this.seatModelInfo.horizontalSeatNum-1)}px;height:${height+this.doubbleBorder*(this.seatModelInfo.verticalSeatNum-1)}px`
           this.$refs.facilityRef.$el.style=style
         }
         //添加单个座位
@@ -581,10 +601,8 @@
             //如果有可以拖动的设备或者模型点击后 确定位置取消拖拽状态
             if(this.showDraggModel){
               //计算开始位置
-              let topIndex= row-Math.floor(this.seatModelArrayWidth/2)
-              let leftIndex= column-Math.floor(this.seatModelArrayHeight/2)
-              console.log(this.seatModelArrayWidth,this.seatModelArrayHeight)
-              console.log(this.seatModelArray)
+              let topIndex= row-Math.floor(this.seatModelArrayHeight/2)
+              let leftIndex= column-Math.floor(this.seatModelArrayWidth/2)
               //将座位的数据添加到二维数组中
               //step 1 判断放置的位置是否被占
               for(let i=0;i<this.seatModelArrayHeight;i++){
@@ -607,11 +625,21 @@
               this.showDraggModel= false
             }else if(this.showDraggFacility){  // 如果添加设施
               //计算开始位置
-              let topIndex= row-Math.floor(this.facilityInfo.facilityWidth/2)
-              let leftIndex= column-Math.floor(this.facilityInfo.facilityHeight/2)
+                    let topIndex= row-Math.floor(this.facilityInfo.facilityHeight/2)
+                    let leftIndex= column-Math.floor(this.facilityInfo.facilityWidth/2)
+                    let facility ={
+                      id:topIndex.toString()+leftIndex.toString(),
+                      topIndex:topIndex,
+                      leftIndex:leftIndex,
+                      facilityWidth:this.facilityInfo.facilityWidth,
+                      facilityHeight:this.facilityInfo.facilityHeight,
+                      facilityType:this.facilityInfo.facilityType,
+                    }
+               this.seatTemplate.facilities.push(facility)
+               console.log(this.seatTemplate.facilities)
               //将座位的数据添加到二维数组中
-              for(let i=0;i<this.facilityInfo.facilityWidth;i++){
-              for(let j=0;j<this.facilityInfo.facilityHeight;j++){
+              for(let i=0;i<this.facilityInfo.facilityHeight;i++){
+              for(let j=0;j<this.facilityInfo.facilityWidth;j++){
                   this.gridArray[i+topIndex][j+leftIndex]={'type':4,'id':topIndex.toString()+leftIndex.toString(),'label':''} //设施占位标志（如果有必要 可以根据不同的设施设置不同的值
                 }
               }
@@ -622,6 +650,7 @@
                   return;
                 }
                this.$set(this.gridArray[row], column, {'type':1,'id':'','label':''})
+               console.log(this.gridArray[row][column])
             }else {//编辑座位或者其它
 
                 if (this.gridArray[row][column].type===0){
@@ -640,15 +669,15 @@
         let gridArray = Array(this.rows).fill({'type':0,'id':'','label':''}).map(()=>Array(this.colums).fill({'type':0,'id':'','lable':''}));
         this.gridArray = gridArray;
         // 计算每个格子的尺寸  （画布的长度-（横向格子数+1）*（margin-left+margin-right））/横向格子数
-        this.gridSize=parseInt(window.getComputedStyle(this.$refs.innerSeatWrapperRef).width)/this.colums-10;
+        this.gridSize=parseInt(window.getComputedStyle(this.$refs.innerSeatWrapperRef).width)/this.colums-this.doubbleBorder;
       },
     },
 
     mounted() {
+      // 初始化 布局二维数组
       this.initSeatArray();
-      // console.log(window.screen.width)
-       this.maskStyle = `{ height: ${document.body.clientHeight}px; height: ${document.body.clientHeight}px;}`
-      // console.log(this.style)
+      // 初始化遮罩层大小
+      this.maskStyle = `{ height: ${document.body.clientHeight}px; height: ${document.body.clientHeight}px;}`
     },
 
 }
@@ -718,7 +747,8 @@
     position: relative;
     bottom:0px;
     box-sizing: content-box;
-    padding: 0px 10px;     /* overflow :hidden; */
+    left:10px;
+    /* padding: 0px 0px;     overflow :hidden; */
     z-index: 1000;
   }
   /*画布中小正方形 */
@@ -755,5 +785,8 @@
     pointer-events: none;
     position: absolute;
   }
-
+.div-facility{
+  position:absolute;
+      opacity: .5;
+}
 </style>

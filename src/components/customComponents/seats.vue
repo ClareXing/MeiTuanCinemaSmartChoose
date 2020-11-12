@@ -1,12 +1,13 @@
 <template>
-<div :style="{width:seatModelArrayWidth*gridSize,height:seatModelArrayHeight*gridSize,
-     top:gridSize*topIndex+'px',left:gridSize*leftIndex+'px'}" class="drag" >
+<div :style="{width:divWidth*gridSize,height:divHeight*gridSize,}" :class="dragClass" >
      <!--根据相关参数画模型-->
-    <div v-for="(row,rowIndex) in rectArray" :key="rowIndex">
+     <div class="mid-liney" v-if="reqType!==1"></div>
+     <div class="mid-linex" v-if="reqType!==1"></div>
+    <div v-for="(row,rowIndex) in seatModelArray" :key="rowIndex" :v-model="seatModelArray">
       <div v-for="(item,colIndex) in row" :key="colIndex"
         class="square-block" :style="{width:gridSize+'px',height:gridSize+'px'}">
-            <div v-if="rectArray[rowIndex][colIndex]!==-1" class="inner-seat"
-              :class="rectArray[rowIndex][colIndex]===1?'selected-seat':'unselected-seat'">
+            <div v-if="seatModelArray[rowIndex][colIndex]!==-1" class="inner-seat"
+              :class="seatModelArray[rowIndex][colIndex]===1?'selected-seat':'unselected-seat'">
             </div>
       </div>
     </div>
@@ -43,17 +44,27 @@ export default {
         default:1,
       } //请求类型 （1画模型，2画预览）
   },
-  watch:{
-    // draggable:function(oldValue,newValue){
-    //     if(!newValue){
+  computed: {
+    dragClass: function () {
+      return  this.reqType===1?'drag':'undrag'
+    },
+    divWidth:function(){
+      return this.seatModelArrayWidth
 
-    //     }
-    // }
+    },
+    divHeight:function(){
+     return this.seatModelArrayHeight
+    },
+    seatModelArray(){
+      return this.renderSeat();
+    }
+
   },
+
 
   data(){
     return {
-      rectArray:[],
+      // rectArray:[],
       emptyFlag:0,
     }
   },
@@ -68,6 +79,8 @@ export default {
         //确定第一个环的左上开始位置(最外环为第一个环)
         let  startRowIndex = 0  // 根据布局大小计算环开始的行位置
         let startColIndex = 0  // 根据布局大小计算环开始的列位置
+
+       this. initRectArray();
 
         let oldArray = this.rectArray.slice();
         //oldArray=this.hLayout(rows+4,columns+4,startRowIndex-2,startColIndex-2,oldArray,2);
@@ -119,10 +132,10 @@ export default {
           //回型
             oldArray=this.hLayout(rows,columns,startRowIndex,startColIndex,oldArray);
             // // 去掉四个角
-            //  oldArray[0][0] =this.emptyFlag
-            //  oldArray[0][rows-1] =this.emptyFlag
-            //   oldArray[columns-1][0] =this.emptyFlag
-            //   oldArray[columns-1][rows-1] =this.emptyFlag
+             oldArray[0][0] =this.emptyFlag
+             oldArray[0][columns-1] =this.emptyFlag
+             oldArray[rows-1][0] =this.emptyFlag
+              oldArray[rows-1][columns-1] =this.emptyFlag
               this.rectArray= oldArray;
 
         }else if(this.modelType==='deskShape'){
@@ -131,6 +144,7 @@ export default {
         }else{
 
         }
+        return this.rectArray;
      },
 
       /** 根据朝向 去掉环中多余的座位
@@ -260,8 +274,8 @@ export default {
 
       initRectArray: function(){
         //初始化布局
-        if(this.seatModelArrayHeight){
-          let rectArray = Array(this.seatModelArrayHeight).fill(this.emptyFlag).map(()=>Array(this.seatModelArrayWidth).fill(this.emptyFlag));
+        if(this.divWidth){
+          let rectArray = Array(this.divHeight).fill(this.emptyFlag).map(()=>Array(this.divWidth).fill(this.emptyFlag));
           this.rectArray = rectArray;
         }
       },
@@ -269,8 +283,8 @@ export default {
 
   },
   mounted(){
-    this.initRectArray();
-    this.renderSeat();
+    // this.initRectArray();
+    // this.renderSeat();
     this.$emit('initSeatModelArray', this.rectArray)
   }
 
@@ -288,6 +302,27 @@ export default {
     border: white 5px solid;
     background: #EBEBEB;
   }
+    .mid-liney{
+    position: absolute;
+    left:50%;
+    transform: translateX(-50%);
+    top:-10%;
+    width:1px;
+    min-height:20px;
+      height:200px;
+    border-left:1px dashed #919191;
+  }
+  .mid-linex{
+    position: absolute;
+    left:-10%;
+
+    top:50%;
+    transform: translateY(50%);
+    min-width:20px;
+    width:200px;
+    height:1px;
+    border-top:1px dashed #919191;
+  }
 
   /*画布区域大小*/
   .inner-wrapper{
@@ -302,7 +337,12 @@ export default {
       pointer-events: none;
       /* background-size: cover; */
       opacity: .5;
-}
+  }
+  .undrag{
+       position: absolute;
+     pointer-events: none;
+     background: grey;
+  }
   .inner-seat{
     width:100%;
     height:100%;
@@ -311,7 +351,7 @@ export default {
  .selected-seat{
     background: url('../../assets/selected.png') center center no-repeat;
     background-size: 100% 100%;
-        line-height: 42px;
+    line-height: 42px;
   }
   .unselected-seat{
     background-size: 100% 100%;

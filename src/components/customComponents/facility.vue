@@ -36,10 +36,13 @@ methods: {
         // 初始化图片路径
         initImgSrc:function(){
            this.imgSrc= require("../../assets/" +this.facilityType)
+           console.log(this.facilityWidth,this.facilityHeight,this.gridSize)
         },
    },
+
   mounted(){
     this.initImgSrc();
+
   }
 }
 </script>
