@@ -5,7 +5,7 @@
 </template>
 
 <script>
-  import cinemaSeatChoose from './components/seat-layout.vue'
+  import cinemaSeatChoose from './components/views/components/conferenceRoomLayoutEdit'
   import Draggable from 'vuedraggable'
 
   export default {
