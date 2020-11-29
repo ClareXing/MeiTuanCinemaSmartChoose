@@ -5,11 +5,10 @@
      <div class="mid-linex" v-if="reqType!==1"></div> -->
      <div v-for="(row,rowIndex) in seatModelArray" :key="rowIndex" :v-model="seatModelArray">
       <div v-for="(item,colIndex) in row" :key="colIndex"
-        :class="preClass" :style="{width:gridSize+'px',height:gridSize+'px'
-        ,border:'white '+ doubleBorder/2+'px solid'}">
-            <div class="inner-seat"
-             :class="seatStyle(seatModelArray[rowIndex][colIndex].type)">
-            </div>
+        :class="[preClass,seatStyle(seatModelArray[rowIndex][colIndex].type
+        ,seatModelArray[rowIndex][colIndex].orientation)]"
+         :style="{width:gridSize+'px',height:gridSize+'px'
+        ,border:'white '+ doubleBorder/2+'px solid'}" class="inner-seat">
       </div>
     </div>
      <!--根据相关seats 复原座位-->
@@ -40,11 +39,12 @@ export default {
       type: Number,
       default: 2,
     },
+    // 座位类型 默认1 普通座位
     seatType: {
       type: Number,
       default: 1,
     },
-    seatsArray: { type: Array, default: Array }, // 座位数组
+    // seatsArray: { type: Array, default: Array }, // 座位数组
     reqType: {
       type: Number,
       default: 1,
@@ -52,11 +52,11 @@ export default {
   },
   computed: {
     dragClass() {
-      return this.reqType === 1 ? 'drag' : 'undrag';
+      return this.reqType !== 4 ? (this.reqType === 1? 'drag':'unset-drag') : 'undrag';
     },
 
     preClass() {
-      return this.reqType === 1 ? 'square-block' : 'pre-square-block';
+      return this.reqType !== 4 ? 'square-block' : 'pre-square-block';
     },
     divWidth() {
       return this.seatModelArrayWidth;
@@ -68,15 +68,42 @@ export default {
       return this.renderSeat();
     },
 
-    seatStyle() {
-      return (type) => {
-        if (type !== 1) {
+    // seatStyle() {
+    //   return (type) => {
+    //     if (type !== 1) {
+    //       return 'no-seat';
+    //     }
+    //     if (this.reqType !== 1) {
+    //       return 'pre-normal-seat';
+    //     }
+    //     return 'normal-seat';
+    //   };
+    // },
+
+     seatStyle() {
+      return (type, orientation) => {
+        // 不是座位
+         if (type !== 1) {
           return 'no-seat';
         }
-        if (this.reqType !== 1) {
+        //预览状态
+        if(this.reqType===4){
           return 'pre-normal-seat';
         }
-        return 'normal-seat';
+
+       switch (orientation) {
+          case 'l':
+            return this.reqType===1?'normal-seat-left':(this.reqType===2?'normal-seat-selected-left':'normal-seat-unset-left');
+          case 'r':
+            return this.reqType===1?'normal-seat-right':(this.reqType===2?'normal-seat-selected-right':'normal-seat-unset-right');
+          case 'u':
+            return this.reqType===1?'normal-seat-up':(this.reqType===2?'normal-seat-selected-up':'normal-seat-unset-up');
+          case 'd':
+            return this.reqType===1?'normal-seat-down':(this.reqType===2?'normal-seat-selected-down':'normal-seat-unset-down');
+          default:
+            return this.reqType===1?'normal-seat-down':(this.reqType===2?'normal-seat-selected-down':'normal-seat-unset-down');
+          }
+
       };
     },
 
@@ -329,27 +356,7 @@ export default {
     justify-content: center;
     align-items: center;
     background:white;
-
-    //  border-color:grey;
   }
-//  .mid-liney{
-//     position: absolute;
-//     left:50%;
-//     transform: translateX(-50%);
-//     top:-160%;
-//     width:1px;
-//     height:198px;
-//     border-left:1px dashed black;
-//   }
-//   .mid-linex{
-//     position: absolute;
-//     left:-148%;
-//     top:50%;
-//     transform: translateY(50%);
-//     width:197px;
-//     height:1px;
-//     border-top:1px dashed black;
-//   }
   .drag{
       position: absolute;
       top: 0;
@@ -358,6 +365,15 @@ export default {
      border-radius: 2px;
      background-size: cover;
      background: rgba(13, 175, 156, 0.15);
+  }
+    .unset-drag{
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+     border-radius: 2px;
+     background-size: cover;
+     background: rgba(253, 87, 81, 0.15);
   }
   .undrag{
      position: absolute;
@@ -369,16 +385,70 @@ export default {
     height:100%;
     cursor: pointer;
   }
- .normal-seat{
-    background: url('../../../../assets/image/web/seat/normal-seat-down.svg')
-    center center no-repeat;
+   .normal-seat-left{
+     background: url('../../../../assets/image/web/seat/normal-seat-left.svg') center center no-repeat;
     background-size: 100% 100%;
-    line-height: 42px;
+   line-height: 42px;
+  }
+ .normal-seat-right{
+    background: url('../../../../assets/image/web/seat/normal-seat-right.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+   .normal-seat-up{
+   background: url('../../../../assets/image/web/seat/normal-seat-up.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+ .normal-seat-down{
+    background: url('../../../../assets/image/web/seat/normal-seat-down.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+     .normal-seat-selected-left{
+     background: url('../../../../assets/image/web/seat/normal-seat-selected-left.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+ .normal-seat-selected-right{
+    background: url('../../../../assets/image/web/seat/normal-seat-selected-right.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+   .normal-seat-selected-up{
+   background: url('../../../../assets/image/web/seat/normal-seat-selected-up.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+ .normal-seat-selected-down{
+    background: url('../../../../assets/image/web/seat/normal-seat-selected-down.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+     .normal-seat-unset-left{
+     background: url('../../../../assets/image/web/seat/normal-seat-unset-left.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+ .normal-seat-unset-right{
+    background: url('../../../../assets/image/web/seat/normal-seat-unset-right.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+   .normal-seat-unset-up{
+   background: url('../../../../assets/image/web/seat/normal-seat-unset-up.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+ .normal-seat-unset-down{
+    background: url('../../../../assets/image/web/seat/normal-seat-unset-down.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
   }
   .pre-normal-seat{
     background: #7AA4CA;
     background-size: 100% 100%;
-         border-radius: 2px;
+    border-radius: 2px;
   }
  .no-seat{
     background-size: 100% 100%;

@@ -23,24 +23,24 @@
      </div>
 
      <div class="seat-wrapper" ref="seatWrapperRef">
-        <div class="inner-seat-wrapper"  @click="click"
+        <div class="inner-seat-wrapper"   @mousedown="mousedown" @mouseup="mouseup"
         @mousemove.stop='mousemove'  ref="innerSeatWrapperRef">
           <!--模型布局-->
           <div v-for="(row,rowIndex) in seatTemplate.layoutArray" :key="rowIndex"
           style="display: flex;">
             <div v-for="(item,colIndex) in row" :key="colIndex"
-              :class="[seatTemplate.layoutArray[rowIndex][colIndex].type!== 0?
-              'square-noneblock':'square-block',seatStyle(seatTemplate.layoutArray[rowIndex][colIndex].type,
+              :class="[showBlock(seatTemplate.layoutArray[rowIndex][colIndex].type),
+              seatStyle(seatTemplate.layoutArray[rowIndex][colIndex].type,
               seatTemplate.layoutArray[rowIndex][colIndex].orientation)]"
-              :style="{width:gridSize+'px',height:gridSize+'px'}"  :row="rowIndex" :column="colIndex"
-              class ='normal-seat'>
+              :style="{width:gridSize+'px',height:gridSize+'px'}"  :row="rowIndex" :column="colIndex">
                 {{seatTemplate.layoutArray[rowIndex][colIndex].type}}
                 <!-- {{seatTemplate.layoutArray[rowIndex][colIndex].orientation}}
                   {{seatTemplate.layoutArray[rowIndex][colIndex].id}} -->
             </div>
           </div>
           <!--设施-->
-          <div  :class="enableEventclass" @click="editFacility(facility)" v-for="(facility,index) in seatTemplate.facilities" :key="index+'20000'" >
+          <div  :class="enableEventclass" @click="editFacility(facility)"
+          v-for="(facility,index) in seatTemplate.facilities" :key="index+'20000'" >
           <facility
                :doubleBorder="10"
                :gridSize="gridSize"
@@ -66,7 +66,7 @@
                 :doorArea="seatTemplate.doorArea"
                 :style="{top:seatTemplate.wallTop*(gridSize+doubleBorder)+'px',
                      left:seatTemplate.wallLeft*(gridSize+doubleBorder)+'px'}"
-                 @addDoor="addDoor"
+                @addDoor="addDoor"
                   v-if='(!editState||facilityInfo.facilityType==="door")&&seatTemplate.wallWidth>0'>
           </wall>
         <!--座位或设施编辑框-->
@@ -112,9 +112,9 @@
          </div>
 
          <!--添加座位时的图片-->
-          <div v-show="enableAddSeat" ref="addSeatDivRef" id='addSeatDivRef' class="add-seat">
-            <img src="../../../assets/image/web/seat/normal-seat-down.svg"
-            width="100%" height="100%"/>
+          <div v-show="enableAddSeat" ref="addSeatDivRef" id='addSeatDivRef' :class="forbidden?'add-seat-unset':'add-seat'">
+            <img :src="forbidden?require('../../../assets/image/web/seat/normal-seat-unset-down.svg'):
+                 require('../../../assets/image/web/seat/normal-seat-selected-down.svg')"/>
           </div>
 
           <!--可移动状态座位模型鼠标点击定位时消失-->
@@ -126,7 +126,7 @@
                 :seatModelArrayWidth="parseInt(seatModelArrayWidth)"
                 :modelType="seatModelInfo.seatModelType"
                 :orientation="seatModelInfo.orientation" v-if="showDraggModel"
-                :reqType="1">
+                :reqType="forbidden?3:1">
           </seats>
           <!--可移动设施时显示-->
           <facility :type="'设施'" ref="facilityRef"
@@ -138,7 +138,7 @@
                 :facilityType="facilityInfo.facilityType"
                 :holdSeatNum="parseInt(facilityInfo.holdSeatNum)"
                 :facilityOrientation="facilityInfo.facilityOrientation"
-                v-if="showDraggFacility" :reqType="1">
+                v-if="showDraggFacility" :reqType="forbidden?3:1">
           </facility>
          </div>
      </div>
@@ -218,7 +218,7 @@
                       :modelType="seatModelInfo.seatModelType"
                       :orientation="seatModelInfo.orientation"
                       :doubleBorder="4"
-                      :reqType="2">
+                      :reqType="4">
                      </seats>
                   </div>
               </el-col>
@@ -237,14 +237,14 @@
             <div class="grid-content"  @click="nextFacility('rostrum')">
               <img id='rostrum' src="../../../assets/image/web/seat/rostrum.svg">
               <span>主席台</span>
-              <span class='tipSpan'>仅可添加一个</span>
+              <span class='tipsSpan'>仅可添加一个</span>
             </div>
           </el-col>
           <el-col :span="6">
             <div class="grid-content"  @click="nextFacility('door')">
                <img id='door' src="../../../assets/image/web/seat/door.svg" >
                 <span>入口</span>
-                 <span class='tipSpan'>围墙变化后需重新放置</span>
+                 <span class='tipsSpan'>围墙变化后需重新放置</span>
             </div>
          </el-col>
           <el-col :span="6">
@@ -402,22 +402,13 @@ export default {
       };
     },
 
-    transformClass() {
-      // 默认朝下
-      return (orientation) => {
-        switch (orientation) {
-        case 'l':
-          return 'divTransform90';
-        case 'r':
-          return 'divTransform270';
-        case 'u':
-          return 'divTransform180';
-        case 'd':
-          return '';
-        default:
-          return '';
+    showBlock(){
+      return (type) => {
+        if (type!==0){
+          return  'square-noneblock'
         }
-      };
+        return  'square-block'
+      }
     },
 
     seatStyle() {
@@ -455,6 +446,8 @@ export default {
 
   data() {
     return {
+      // 设施座位不可放置状态
+      forbidden:false,
       // 遮罩层的样式
       maskStyle: null,
       // 座位编辑div 显示
@@ -468,7 +461,7 @@ export default {
       // 布局行数
       rows: 20,
       // 布局列数
-      colums: 24,
+      columns: 24,
       // 布局格子的大小
       gridSize: 0,
       // 模型选择对话框显示
@@ -507,7 +500,6 @@ export default {
         holdSeatNum: 2, // 设施容纳的座位数量
         facilityOrientation: 'u', // 设施朝（上下左右 依次 u d l r）默认朝上
       },
-      imageSrc: '', // 选择的设施模型图片
       // 座位模板信息
       seatTemplate: {
         /*
@@ -734,6 +726,7 @@ export default {
     },
     // 添加单个座位
     addSeat() {
+       this.enableEvent = false;
       this.enableAddSeat = true;
     },
     // 清空全部
@@ -766,7 +759,7 @@ export default {
       // 将所有座位的值变为0
       const oldArray = this.seatTemplate.layoutArray.slice();
       for (let i = 0; i < this.rows; i += 1) {
-        for (let j = 0; j < this.colums; j += 1) {
+        for (let j = 0; j < this.columns; j += 1) {
           oldArray[i][j] = {
             type: 0, id: '', label: '', orientation: '',
           };
@@ -815,7 +808,7 @@ export default {
         }
         // 将二维数组修设施占位部分type 值修改为0(此处可后续优化)
         for (let i = 0; i < this.rows; i += 1) {
-          for (let j = 0; j < this.colums; j += 1) {
+          for (let j = 0; j < this.columns; j += 1) {
             if (this.seatTemplate.layoutArray[i][j].id === this.editInfo.id) {
               this.seatTemplate.layoutArray[i][j] = {
                 type: 0, id: '', label: '', orientation: '',
@@ -845,7 +838,7 @@ export default {
         }
         // 将二维数组修设施占位部分type 值修改为0(此处可后续优化)
         for (let i = 0; i < this.rows; i += 1) {
-          for (let j = 0; j < this.colums; j += 1) {
+          for (let j = 0; j < this.columns; j += 1) {
             if (this.seatTemplate.layoutArray[i][j].id === this.editInfo.id) {
               this.seatTemplate.layoutArray[i][j] = {
                 type: 0, id: '', label: '', orientation: '',
@@ -867,6 +860,7 @@ export default {
       this.showDraggModel = false;
       this.showDraggFacility = false;
       this.showEditForm = false;
+       this.enableEvent = true;
     },
     // 取消模型
     cancel() {
@@ -893,7 +887,9 @@ export default {
         this.seatTemplate.doorArea.forEach((item) => {
           // 门的位置已经有门，或者门的位置添加超出了围墙边角
           if (rowIndex === item.top || rowIndex + 1 === item.top || rowIndex < 0 || rowIndex + 1 > this.seatTemplate.wallHeight) {
+            this.forbidden= true;
             console.log('越界');
+            return ;
           }
         });
         this.seatTemplate.doorArea.push({ top: rowIndex, left: colIndex });
@@ -919,8 +915,11 @@ export default {
         // step 1 校验位置是否可放
         // 门的位置已经有门，或者门的位置添加超出了围墙边角则不能放置
         this.seatTemplate.doorArea.forEach((item) => {
-          if (colIndex === item.left || colIndex + 1 === item.left || colIndex < 0 || colIndex + 1 > this.seatTemplate.wallWidth) {
+          if (colIndex === item.left || colIndex + 1 === item.left ||
+          colIndex < 0 || colIndex + 1 > this.seatTemplate.wallWidth) {
+            this.forbidden= true;
             console.log('越界');
+            return
           }
         });
 
@@ -972,35 +971,34 @@ export default {
         if (!row) {
           return;
         }
-
         const top = e.target.offsetTop;
         const left = e.target.offsetLeft;
-        const style = `left: ${left}px;top: ${top}px;width:${this.gridSize}px;height:${this.gridSize};background:red;position: absolute;`;
+        const style = `left: ${left-6}px;top: ${top-6}px;`;
         this.$refs.addSeatDivRef.style = style;
       }
     },
     // 鼠标点击事件
-    click(e) {
+    mousedown(e) {
       // 判断点击的位置是否在格子上
       const row = e.target.getAttribute('row');
       if (!row) {
+        this.forbidden = true ;//不可放置
         return;
       }
       const column = e.target.getAttribute('column');
+
       // 如果有可以拖动的设施或者模型点击后 确定位置取消拖拽状态
       if (this.showDraggModel) {
         // 计算开始位置
         const topIndex = parseInt(row,10) - Math.ceil(this.seatModelArrayHeight / 2) + 1;
         const leftIndex = parseInt(column,10) - Math.ceil(this.seatModelArrayWidth / 2) + 1;
-
         // 将座位的数据添加到二维数组中
         // step 1 判断放置的位置是否被占(除了围墙)
         for (let i = 0; i < this.seatModelArrayHeight; i += 1) {
           for (let j = 0; j < this.seatModelArrayWidth; j += 1) {
             if (this.seatTemplate.layoutArray[i + topIndex][j + leftIndex].type !== 0
             && this.seatModelArray[i][j].type !== 0) {
-              this.showDraggModel = false;
-              this.enableEvent = true;// 开启设施图片的鼠标事件
+              this.forbidden = true ;//不可放置
               return;
             }
           }
@@ -1009,6 +1007,8 @@ export default {
         if (topIndex < 2 || leftIndex < 2 || topIndex + this.seatModelArrayHeight > this.rows - 2
         || leftIndex + this.seatModelArrayWidth > this.columns - 2
         ) {
+          this.forbidden = true ;//不可放置
+          return ;
           console.log('越界');
         }
 
@@ -1018,7 +1018,8 @@ export default {
             // 只修改没有座位的位置
             if (this.seatModelArray[i][j].type !== 0) {
               this.seatTemplate.layoutArray[i + topIndex][j + leftIndex] = {
-                type: this.seatModelArray[i][j].type, id: '', label: '', orientation: this.seatModelArray[i][j].orientation,
+                type: this.seatModelArray[i][j].type, id: '', label: '',
+                 orientation: this.seatModelArray[i][j].orientation,
               };
             }
           }
@@ -1032,6 +1033,7 @@ export default {
       } else if (this.showDraggFacility) { // 如果添加设施
         // 门不在这里添加
         if (this.facilityInfo.facilityType === 'door') {
+           this.forbidden = true ;//不可放置
           return;
         }
         // 计算开始位置
@@ -1041,34 +1043,43 @@ export default {
         // step 2 判断围墙是否越界
         // 如果是旋转90或这270
         if (this.facilityInfo.facilityOrientation === 'l' || this.facilityInfo.facilityOrientation === 'r') {
-
            topIndex = topIndex - parseInt((this.facilityInfo.facilityWidth - this.facilityInfo.facilityHeight) / 2,10);
            leftIndex = leftIndex + parseInt((this.facilityInfo.facilityWidth - this.facilityInfo.facilityHeight) / 2,10);
+            if (topIndex < 2 || leftIndex < 2 || topIndex + this.facilityInfo.facilityWidth > this.rows - 2
+                  || leftIndex + this.facilityInfo.facilityHeight > this.columns - 2) {
+                     this.forbidden = true ;
+              console.log('越界1');
+              return
+            }
           // 校验放下去的位置是否空白
             for (let i = 0; i < this.facilityInfo.facilityHeight; i += 1) {
               for (let j = 0; j < this.facilityInfo.facilityWidth; j += 1) {
-                if (this.seatTemplate.layoutArray[i + topIndex][j + leftIndex].type !== 0) {
-                  this.showDraggModel = false;
+                if (this.seatTemplate.layoutArray[j + topIndex][i + leftIndex].type !== 0) {
+                  // this.showDraggModel = false;
+                  this.forbidden = true ;//不可放置
                   console.log('return1')
                   return;
                 }
               }
             }
+            // console.log('LR',topIndexTemp,leftIndexTemp,topIndexTemp+this.seatModelArrayWidth
+            // ,leftIndexTemp+this.seatModelArrayHeight)
 
-          // console.log('LR',topIndexTemp,leftIndexTemp,topIndexTemp+this.seatModelArrayWidth
-          // ,leftIndexTemp+this.seatModelArrayHeight)
-          if (topIndex < 2 || leftIndex < 2 || topIndex + this.facilityInfo.facilityWidth > this.rows - 2
-                || leftIndex + this.facilityInfo.facilityHeight > this.columns - 2) {
-            console.log('越界1');
-          }
 
         } else {
 
+          if (topIndex < 2 || leftIndex < 2 || topIndex + this.facilityInfo.facilityHeight > this.rows - 2
+                || leftIndex + this.facilityInfo.facilityWidth > this.columns - 2) {
+            this.forbidden = true ;
+            console.log('越界2');
+            return;
+          }
           //校验放下去的位置是否有空白
           for (let i = 0; i < this.facilityInfo.facilityHeight; i += 1) {
             for (let j = 0; j < this.facilityInfo.facilityWidth; j += 1) {
               if (this.seatTemplate.layoutArray[i + topIndex][j + leftIndex].type !== 0) {
-                this.showDraggModel = false;
+                // this.showDraggModel = false;
+                 this.forbidden = true ;
                 console.log('return1')
                 return;
               }
@@ -1076,16 +1087,9 @@ export default {
           }
 
           // console.log(topIndex,leftIndex,topIndex+this.facilityInfo.facilityHeight,leftIndex+this.facilityInfo.facilityWidth)
-          if (topIndex < 2 || leftIndex < 2 || topIndex + this.facilityInfo.facilityHeight > this.rows - 2
-                || leftIndex + this.facilityInfo.facilityWidth > this.columns - 2) {
-            console.log('越界2');
-            return;
-          }
 
 
         }
-
-
 
         // step3 将设备信息添加到 设备数组中
         const facilityId = Math.random().toString(36).substr(3, 6);// 生成6位长度的设施ID
@@ -1130,17 +1134,22 @@ export default {
         // step 4 计算围墙(添加座位时 围墙与座位之间空一圈)
         this.computeWall();
         // 设备添加成功 移除拖拽的设备图片
-        this.enableEvent = true;
         this.showDraggFacility = false;
-      } else if (this.enableAddSeat) { // 如果是添加座位
+        this.enableEvent = true;
+         // 如果是添加座位
+      } else if (this.enableAddSeat) {
+
         // 判断点击的位置是否被占
         if (this.seatTemplate.layoutArray[row][column].type !== 0) {
+           this.forbidden = true ;
           return;
         }
         // 判断是否越界
         if (row < 2 || column < 2 || parseInt(row, 10) + 1 > this.rows - 2 || parseInt(column, 10) + 1 > this.columns - 2
         ) {
+           this.forbidden = true ;
           console.log('越界');
+          return
         }
         this.$set(this.seatTemplate.layoutArray[row], column, {
           type: 1, id: '', label: '', orientation: '',
@@ -1152,6 +1161,7 @@ export default {
         // 如果点击的位置没有东西
         if (tempSeatType === 0) {
           // 1 普通座位,2 高管座
+          return
         } else if (tempSeatType === 1 || tempSeatType === 2) {
           // 显示出编辑框
           const left = e.target.offsetLeft;
@@ -1167,6 +1177,9 @@ export default {
         }
       }
     },
+    mouseup(){
+      this.forbidden= false;
+    },
 
     // 初始座位数组
     initSeatArray() {
@@ -1174,14 +1187,14 @@ export default {
       const gridArray = Array(this.rows).fill({
         type: 0, id: '', label: '', orientation: '',
       })
-        .map(() => Array(this.colums).fill({
+        .map(() => Array(this.columns).fill({
           type: 0, id: '', lable: '', orientation: '',
         }));
       this.seatTemplate.layoutArray = gridArray;
       // 计算每个格子的尺寸  （画布的长度-（横向格子数+1）*（margin-left+margin-right））/横向格子数
       // this.gridSize = parseInt(
       //   window.getComputedStyle(this.$refs.innerSeatWrapperRef).width, 10,
-      // ) / this.colums - this.doubleBorder;
+      // ) / this.columns - this.doubleBorder;
       this.gridSize = 32;
     },
   },
@@ -1319,7 +1332,7 @@ export default {
  .normal-seat-left{
      background: url('../../../assets/image/web/seat/normal-seat-left.svg') center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
+    line-height: 42px;
   }
  .normal-seat-right{
     background: url('../../../assets/image/web/seat/normal-seat-right.svg') center center no-repeat;
@@ -1336,7 +1349,27 @@ export default {
     background-size: 100% 100%;
    line-height: 42px;
   }
-   .senior-seat-left{
+   .normal-seat-selected-left{
+     background: url('../../../assets/image/web/seat/normal-seat-selected-left.svg') center center no-repeat;
+    background-size: 100% 100%;
+    line-height: 42px;
+  }
+ .normal-seat-selected-right{
+    background: url('../../../assets/image/web/seat/normal-seat-selected-right.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+   .normal-seat-selected-up{
+   background: url('../../../assets/image/web/seat/normal-seat-selected-up.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+ .normal-seat-selected-down{
+    background: url('../../../assets/image/web/seat/normal-seat-selected-down.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+  .senior-seat-left{
      background: url('../../../assets/image/web/seat/senior-seat-left.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
@@ -1356,12 +1389,47 @@ export default {
     background-size: 100% 100%;
    line-height: 42px;
   }
+    .senior-seat-selected-left{
+     background: url('../../../assets/image/web/seat/senior-seat-selected-left.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+ .senior-seat-selected-right{
+    background: url('../../../assets/image/web/seat/senior-seat-selected-right.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+  .senior-seat-selected-down{
+     background: url('../../../assets/image/web/seat/senior-seat-selected-down.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
+     .senior-seat-selected-up{
+     background: url('../../../assets/image/web/seat/senior-seat-selected-up.svg') center center no-repeat;
+    background-size: 100% 100%;
+   line-height: 42px;
+  }
 
   .senior-seat{
     background-size: 100% 100%;
   }
   .add-seat{
     pointer-events: none;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:55px;height:56px;
+    background: rgba(13, 175, 156, 0.15);
+    border-radius:2px;position: absolute;
+  }
+  .add-seat-unset{
+    pointer-events: none;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    width:55px;height:56px;
+    background: rgba(253, 87, 81, 0.15);
+    border-radius:2px;position: absolute;
   }
   .edit-form {
     // pointer-events: none;
@@ -1388,6 +1456,7 @@ export default {
        display: block;
     }
     &:hover{
+      border: 1px solid #0DAF9C;
       background: #F3FFFE;
       #table{
        content: url('../../../assets/image/web/seat/table-hover.svg');
@@ -1422,7 +1491,7 @@ export default {
     border: 1px solid #86D7CD;
   }
 
-  .tipSpan{
+  .tipsSpan{
       font-size: 10px;
       font-family: PingFangSC-Regular, PingFang SC;
       font-weight: 400;

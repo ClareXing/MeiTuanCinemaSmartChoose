@@ -1,7 +1,7 @@
 <template>
 <div :class="[dragClass, transformClass]">
      <!--会议桌-->
-     <div v-if="facilityType==='table'" class='divTable'
+     <div v-if="facilityType==='table'" :class='divTableClass'
       :style="{width:facilityWidth*(gridSize+doubleBorder)+'px',
       height:facilityHeight*(gridSize+doubleBorder)+'px'}" >
     </div>
@@ -10,24 +10,31 @@
       <div class='divRostrumSeats'>
         <div :style="{width:(facilityWidth-holdSeatNum)/2*(gridSize+doubleBorder)+'px',
         height:(gridSize+doubleBorder)+'px'}"></div>
-        <div v-for="(itme,Index) in holdSeatNum" :key="Index"  class="rostrum-seat" :value="getArray[Index]"
+        <div v-for="(itme,Index) in holdSeatNum" :key="Index"  :class="rostrumSeatClass" :value="getArray[Index]"
              :style="{width:gridSize+'px',height:gridSize+'px'}">
         </div>
       </div>
-        <div class='divRostrum' :style="{width:facilityWidth*(gridSize+doubleBorder)+'px',
+        <div :class='divRostrumClass' :style="{width:facilityWidth*(gridSize+doubleBorder)+'px',
          height:(facilityHeight-1)*(gridSize+doubleBorder)+'px'}"></div>
     </div>
      <!--门-->
     <div v-else-if="facilityType === 'door'"
-      :style="{width:(gridSize)*facilityWidth+'px',height:(gridSize)*facilityHeight+'px'}" class ='divDoor'>
+        :style="{width:(gridSize)*facilityWidth+'px',height:(gridSize)*facilityHeight+'px'}" :class ='divDoorClass'>
         <!-- <img src='../../../../assets/image/web/seat/real-door.svg' width="100%" height= "100%"/> -->
     </div>
      <!--屏幕-->
     <div v-else-if="facilityType === 'mainScreen'" class='divMainScreen'>
-       <img src='../../../../assets/image/web/seat/screen-left.svg'>
+       <img :src="reqType === 1?require('../../../../assets/image/web/seat/screen-selected-left.svg'):
+      (reqType === 2?require('../../../../assets/image/web/seat/screen-left.svg'):
+      require('../../../../assets/image/web/seat/screen-unset-left.svg'))" >
        <img v-for="(itme,index) in facilityWidth-2" :key="index"
-        src='../../../../assets/image/web/seat/screen-middle.svg'>
-       <img src='../../../../assets/image/web/seat/screen-right.svg'>
+       :src="reqType === 1?require('../../../../assets/image/web/seat/screen-selected-middle.svg'):
+      (reqType === 2?require('../../../../assets/image/web/seat/screen-middle.svg'):
+      require('../../../../assets/image/web/seat/screen-unset-middle.svg'))">
+
+       <img  :src="reqType === 1?require('../../../../assets/image/web/seat/screen-selected-right.svg'):
+      (reqType === 2?require('../../../../assets/image/web/seat/screen-right.svg'):
+      require('../../../../assets/image/web/seat/screen-unset-right.svg'))">
     </div>
     <div v-else>
       请选择设施
@@ -66,27 +73,21 @@ export default {
     reqType: {
       type: Number,
       default: 1,
-    }, // 请求类型 （1画模型，2画预览）
+    }, // 请求类型 可拖拽，固定状态2 不可放置状态3
   },
   computed: {
+
     dragClass() {
-      return this.reqType === 1 ? 'drag' : 'undrag';
+     return  this.reqType === 1 ? 'drag' : (this.reqType === 2?'undrag':'dragUnset');
     },
+
     divWidth() {
-    //  if(this.facilityOrientation==='l'||this.facilityOrientation==='r'){
-    //     return this.facilityHeight;
-    //   }else{
-      console.log(this.facilityWidth);
       return this.facilityWidth;
-      // }
     },
     divHeight() {
-      // if(this.facilityOrientation==='l'||this.facilityOrientation==='r'){
-      //   return this.facilityWidth;
-      // }else{
       return this.facilityHeight;
-      // }
     },
+
     facilityBlockArray() {
       return this.renderFacility();
     },
@@ -107,6 +108,22 @@ export default {
       }
     },
 
+    divTableClass(){
+       return this.reqType === 1 ? 'divTableSelected' : (this.reqType === 2?'divTable':'divTableUnset');
+    },
+
+    rostrumSeatClass(){
+        return this.reqType === 1 ? 'rostrum-seat-selected' : (this.reqType === 2?'rostrum-seat':'rostrum-seat-unset');
+    },
+
+    divRostrumClass(){
+       return this.reqType === 1 ? 'divRostrum-selected' : (this.reqType === 2?'divRostrum':'divRostrum-unset');
+    },
+    divDoorClass(){
+             return this.reqType === 1 ? 'divDoor-selected' : (this.reqType === 2?'divDoor':'divDoor-unset');
+    },
+
+    // 获取主席台编号 数组
     getArray() {
       let arr = Array.from(Array(this.holdSeatNum), (v, k) => k + 1);
       arr = this.getRostrumArr(arr).reverse();
@@ -146,6 +163,8 @@ export default {
       }
       return arr2;
     },
+
+
   },
   mounted() {
     this.getArray;
@@ -154,16 +173,28 @@ export default {
 };
 </script>
 
-<style  scoped>
+<style lang="scss" scoped>
   .drag{
       position: absolute;
-      top: 0;
-      left: 0;
+      display:flex;
+      justify-content:center;
+      align-items:center;
       pointer-events: none;
-      opacity: 1;
+      opacity: 1.0;
       border-radius: 2px;
       background-size: cover;
       background: rgba(13, 175, 156, 0.15);
+  }
+  .dragUnset{
+       position: absolute;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      pointer-events: none;
+      opacity: 1.0;
+      border-radius: 2px;
+      background-size: cover;
+      background: rgba(253, 87, 81, 0.15);
   }
   .undrag{
     position:absolute;
@@ -172,21 +203,35 @@ export default {
     justify-content:center;
     align-items:center;
   }
-
-  .rostrum-seat{
-    border: white 5px solid;
-    background: url('../../../../assets/image/web/seat/rostrum-seat-down.svg')
-    center center no-repeat;
-    background-size: 100% 100%;
-    line-height: 42px;
-  }
   .divDoor{
      background: url('../../../../assets/image/web/seat/real-door.svg')
     center center no-repeat;
     background-size: 100% 100%;
   }
+   .divDoor-selected{
+     background: url('../../../../assets/image/web/seat/real-door-selected.svg')
+    center center no-repeat;
+    background-size: 100% 100%;
+  }
+  .divDoor-unset{
+     background: url('../../../../assets/image/web/seat/real-door-unset.svg')
+    center center no-repeat;
+    background-size: 100% 100%;
+  }
   .divTable{
      background: #E7D4C0;
+     border-radius: 2px;
+     width: 100%;
+     height: 100%;
+  }
+  .divTableSelected{
+     background: #0DAF9C;
+     border-radius: 2px;
+     width: 100%;
+     height: 100%;
+  }
+  .divTableUnset{
+     background: #FD5751;
      border-radius: 2px;
      width: 100%;
      height: 100%;
@@ -200,9 +245,40 @@ export default {
       flex-direction: row ;
   }
   .divRostrum{
-      background: #9BC0DF;
-      border-radius: 2px;
+    background: #9BC0DF;
+    border-radius: 4px;
   }
+  .divRostrum-selected{
+    background: #6CCDC2;
+    border-radius: 4px;
+  }
+
+  .divRostrum-unset{
+    background: #FD5751;
+    border-radius: 4px;
+  }
+ .rostrum-seat{
+    border: white 5px solid;
+    background: url('../../../../assets/image/web/seat/rostrum-seat-down.svg')
+    center center no-repeat;
+    background-size: 100% 100%;
+    line-height: 42px;
+  }
+  .rostrum-seat-unset{
+    border: white 5px solid;
+    background: url('../../../../assets/image/web/seat/rostrum-seat-unset-down.svg')
+    center center no-repeat;
+    background-size: 100% 100%;
+    line-height: 42px;
+  }
+  .rostrum-seat-selected{
+    border: white 5px solid;
+    background: url('../../../../assets/image/web/seat/rostrum-seat-selected-down.svg')
+    center center no-repeat;
+    background-size: 100% 100%;
+    line-height: 42px;
+  }
+
  .divMainScreen{
       display: flex;
       flex-direction: row ;
