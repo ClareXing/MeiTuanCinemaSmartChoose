@@ -1,84 +1,98 @@
 <template>
- <div class="pr seatLayout" ref='seatLayoutRef' >
-     <div class="clearfix">
-            <el-input class="vue-input"
+<div class="pr seatLayout" ref='seatLayoutRef'>
+    <div class="clearfix" style="padding-left: 20px">
+    <el-form :rules="rules" ref='templateform' :model="seatTemplate">
+        <el-form-item prop="name" style="margin-bottom: 0">
+        <el-input v-if="nameEdit" class="vue-input"
+          ref="nameInput"
+          @blur="nameEdit = false"
           maxlength="20"
           size="medium"
-          suffix-icon="el-icon-edit"
           placeholder="请输入模板名称"
-          v-model="seatTemplate.name">
+          v-model.trim="seatTemplate.name">
         </el-input>
-        <hr style="border:0;height:2px;background: #F5F6FB" />
+         <div v-else style="height: 36px;display: flex;align-items: center;">{{seatTemplate.name}}
+          <span class="el-icon-edit-outline name-edit-icon" @click="editName"></span>
+          </div>
+        </el-form-item>
+    </el-form>
+        <hr style="border:0;height:2px;background: #F5F6FB;margin: 0" />
       </div>
-     <div class="btn-wrapper">
-       <el-button type="primary"  @click="selModel">选择模型</el-button>
-       <el-button type="primary"  @click="addFacility">添加设施</el-button>
-       <el-button  @click="addSeat" :type="!enableAddSeat?'primary' : ''">添加座位</el-button>
-       <el-button type="primary" icon="el-icon-delete" @click="clearAll">清空全部</el-button>
-       <div class='div-icon'>
-         <div></div><span>主席台</span>
-         <div></div><span>会议桌</span>
-         <div></div><span>主屏幕</span>
-       </div>
-     </div>
-
-     <div class="seat-wrapper" ref="seatWrapperRef">
-        <div class="inner-seat-wrapper"   @mousedown="mousedown" @mouseup="mouseup"
-        @mousemove.stop='mousemove'  ref="innerSeatWrapperRef">
+    <div class="btn-wrapper">
+      <div class="left-wrapper">
+        <el-button type="primary"  @click="selModel">选择模型</el-button>
+        <el-button type="primary"  @click="addFacility">添加设施</el-button>
+        <el-button class="addSeat"
+        @click="addSeat" :type="!enableAddSeat?'primary' : ''">添加座位</el-button>
+        <el-button class="clear-all" type="text" icon="el-icon-delete"
+        @click="clearAll">清空全部</el-button>
+      </div>
+      <div class='div-icon'>
+        <div></div><span>主席台</span>
+        <div></div><span>会议桌</span>
+        <div></div><span>主屏幕</span>
+      </div>
+    </div>
+    <div class="seat-wrapper" ref="seatWrapperRef">
+        <div class="inner-seat-wrapper unselect "  @mousedown="mousedown" @mouseup="mouseup"
+        @mousemove.stop='mousemove'
+        ref="innerSeatWrapperRef" draggable="false">
           <!--模型布局-->
+          <p class="v-selected-area" v-show="isMouseDown" ref="selectedArea"></p>
           <div v-for="(row,rowIndex) in seatTemplate.layoutArray" :key="rowIndex"
           style="display: flex;">
             <div v-for="(item,colIndex) in row" :key="colIndex"
-              :class="[showBlock(seatTemplate.layoutArray[rowIndex][colIndex].type),
-              seatStyle(seatTemplate.layoutArray[rowIndex][colIndex].type,
-              seatTemplate.layoutArray[rowIndex][colIndex].orientation)]"
-              :style="{width:gridSize+'px',height:gridSize+'px'}"  :row="rowIndex" :column="colIndex">
-                {{seatTemplate.layoutArray[rowIndex][colIndex].type}}
-                <!-- {{seatTemplate.layoutArray[rowIndex][colIndex].orientation}}
-                  {{seatTemplate.layoutArray[rowIndex][colIndex].id}} -->
+              :class="[showBlock(item.type), seatStyle(item.type,item.orientation,
+             typeof(item.selected)==='undefined'||!item.selected?false:true)]"
+              :style="{width:gridSize+'px',height:gridSize+'px'}"
+              :row="rowIndex" :column="colIndex">
+                <!-- {{typeof(item.selected)==='undefined'||!item.selected?false:true}} -->
             </div>
           </div>
           <!--设施-->
           <div  :class="enableEventclass" @click="editFacility(facility)"
           v-for="(facility,index) in seatTemplate.facilities" :key="index+'20000'" >
-          <facility
-               :doubleBorder="10"
-               :gridSize="gridSize"
-               :facilityHeight="facility.facilityHeight"
-               :facilityWidth="facility.facilityWidth"
-               :facilityOrientation="facility.facilityOrientation"
-               :facilityType="facility.facilityType"
-               :holdSeatNum="facility.holdSeatNum"
-               :style="{
-                  top:(gridSize+doubleBorder)*facility.topIndex+diffLeftTop(facility.facilityOrientation,
+            <facility
+                :doubleBorder="10"
+                :gridSize="gridSize"
+                :facilityHeight="facility.facilityHeight"
+                :facilityWidth="facility.facilityWidth"
+                :facilityOrientation="facility.facilityOrientation"
+                :facilityType="facility.facilityType"
+                :holdSeatNum="facility.holdSeatNum"
+                :style="{
+                  top:(gridSize+doubleBorder)*facility.topIndex
+                  +diffLeftTop(facility.facilityOrientation,
                   facility.facilityWidth,facility.facilityHeight,gridSize+doubleBorder)+'px',
-                  left:(gridSize+doubleBorder)*facility.leftIndex-diffLeftTop(facility.facilityOrientation,
+                  left:(gridSize+doubleBorder)*facility.leftIndex
+                  -diffLeftTop(facility.facilityOrientation,
                   facility.facilityWidth,facility.facilityHeight,gridSize+doubleBorder)+'px'}"
-                :reqType="2">
-               </facility>
-               </div>
+                  :reqType="facility.selected?1:2">
+            </facility>
+          </div>
            <!--围墙  -->
-          <wall :borderWidth="gridSize"  ref="wallRef"
+          <wall :borderWidth="10"  ref="wallRef"
                 :wallHeight="seatTemplate.wallHeight"
                 :wallWidth="seatTemplate.wallWidth"
                 :startLeftIndex="seatTemplate.wallLeft"
                 :startTopIndex="seatTemplate.wallTop"
                 :doorArea="seatTemplate.doorArea"
                 :style="{top:seatTemplate.wallTop*(gridSize+doubleBorder)+'px',
-                     left:seatTemplate.wallLeft*(gridSize+doubleBorder)+'px'}"
+                         left:seatTemplate.wallLeft*(gridSize+doubleBorder)+'px'}"
+                :gridSize="gridSize"
                 @addDoor="addDoor"
-                  v-if='(!editState||facilityInfo.facilityType==="door")&&seatTemplate.wallWidth>0'>
+                v-if='(!editState||facilityInfo.facilityType==="door")&&seatTemplate.wallWidth>0'>
           </wall>
         <!--座位或设施编辑框-->
          <div class='edit-form' v-if='showEditForm' :style="editDivStyle" >
            <el-card class="box-card">
             <div slot="header" class="clearfix">
               <span>{{editInfo.type}}</span>
-              <el-button style="float: right; padding: 3px 0" type="text">操作按钮</el-button>
             </div>
             <div  class=" item">
-               <el-form>
-                   <el-form-item label="座位类型" v-if="editInfo.type==='座位'">
+               <el-form label-position="left">
+                   <el-form-item label="座位类型" v-if="editInfo.type.indexOf('座位')!==-1"
+                   label-width="92px">
                     <el-select v-model="seatType" placeholder="请选择座位类型">
                       <el-option
                         v-for="item in seatTypes"
@@ -88,7 +102,9 @@
                       </el-option>
                     </el-select>
                    </el-form-item>
-                   <el-form-item label="座位朝向" v-if="editInfo.type==='座位'">
+                   <el-form-item label="座位方向"
+                    v-if="editInfo.type.indexOf('座位')!==-1"
+                    label-width="92px">
                     <el-select v-model="seatOrientation" placeholder="请选择">
                       <el-option
                         v-for="item in orientations"
@@ -98,23 +114,31 @@
                       </el-option>
                     </el-select>
                    </el-form-item>
-                   <el-form-item label="编辑设施"  v-if="editInfo.type!=='座位'">
-                   <el-link type="primary" :underline="true" @click="okEdit">编辑{{editInfo.type}}</el-link>
+                   <el-form-item label="编辑设施"  v-if="editInfo.type.indexOf('座位')===-1"
+                    label-width="92px">
+                   <el-link type="primary" :underline="true"
+                    @click="okEdit">编辑{{editInfo.type}}</el-link>
                    </el-form-item>
                      <el-form-item>
-                      <el-button  icon="el-icon-delete" @click="deleteItems">删除</el-button>
-                      <el-button type="primary" @click="okEdit">确定</el-button>
-                      <el-button @click="cancelEdit">取消</el-button>
+                       <div class="edit-btn-wrapper">
+                      <el-button  icon="el-icon-delete" @click="deleteItems"
+                      class='delete-btn'>删除</el-button>
+                      <el-button @click="cancelEdit"
+                      :type="editInfo.type.indexOf('座位')===-1?'primary':''">取消</el-button>
+                      <el-button type="primary" @click="okEdit"
+                      v-if="editInfo.type.indexOf('座位')!==-1">确定</el-button>
+                       </div>
                     </el-form-item>
                </el-form>
             </div>
           </el-card>
          </div>
-
          <!--添加座位时的图片-->
-          <div v-show="enableAddSeat" ref="addSeatDivRef" id='addSeatDivRef' :class="forbidden?'add-seat-unset':'add-seat'">
-            <img :src="forbidden?require('../../../assets/image/web/seat/normal-seat-unset-down.svg'):
-                 require('../../../assets/image/web/seat/normal-seat-selected-down.svg')"/>
+          <div v-show="enableAddSeat" ref="addSeatDivRef" id='addSeatDivRef'
+          :class="forbidden?'add-seat-unset':'add-seat'">
+            <img :src="forbidden?
+            require('../../../assets/image/web/seat/normal-seat-unset-up.svg'):
+            require('../../../assets/image/web/seat/normal-seat-selected-up.svg')"/>
           </div>
 
           <!--可移动状态座位模型鼠标点击定位时消失-->
@@ -179,10 +203,12 @@
         width="652px"  custom-class='dialog-model-detail'
         :close-on-click-modal="false">
             <el-row>
-               <el-col :span="14">
-                  <el-form  label-position="right">
-                   <el-form-item label="U开口方向" v-show="seatModelInfo.seatModelType==='uShape'" >
-                        <el-select v-model="seatModelInfo.orientation" placeholder="请选择">
+               <el-col :span="16">
+                  <el-form  label-position="left"  >
+                    <el-form-item label="U开口方向" label-width="92px"
+                   v-show="seatModelInfo.seatModelType==='uShape'" >
+                        <el-select v-model="seatModelInfo.orientation"
+                        placeholder="请选择" style="width:300px">
                           <el-option
                             v-for="item in orientations"
                             :key="item.value"
@@ -191,24 +217,27 @@
                           </el-option>
                         </el-select>
                     </el-form-item>
-
-                    <el-form-item
-                    :label="seatModelInfo.seatModelType==='uShape'?'u底部座位':'横向座位数'">
-                      <el-input-number   v-model="seatModelInfo.horizontalSeatNum"
-                       controls-position="right" :min="1" :max="13"></el-input-number>
-                    </el-form-item>
-
-                    <el-form-item
-                    :label="this.seatModelInfo.seatModelType==='uShape'?'u侧边座位':'纵向座位数'">
-                        <el-input-number v-model="seatModelInfo.verticalSeatNum"
-                          controls-position="right"
-                        :min="1" :max="15" label="纵向座位数"></el-input-number>
-                    </el-form-item>
-
+                  <el-row>
+                    <el-col :span="12">
+                        <el-form-item label-width="92px"
+                        :label="seatModelInfo.seatModelType==='uShape'?'U底部座位':'横向座位数'">
+                          <el-input-number   v-model="seatModelInfo.horizontalSeatNum"
+                          controls-position="right" :min="1" :max="13"></el-input-number>
+                        </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                        <el-form-item label-width="92px"
+                        :label="this.seatModelInfo.seatModelType==='uShape'?'U侧边座位':'纵向座位数'">
+                            <el-input-number v-model="seatModelInfo.verticalSeatNum"
+                              controls-position="right"
+                            :min="1" :max="15" label="纵向座位数"></el-input-number>
+                        </el-form-item>
+                    </el-col>
+                 </el-row>
               <!--模型预览-->
               </el-form>
               </el-col>
-                <el-col :span="10">
+              <el-col :span="8">
                   <div style="text-align:center;" class='div-preview'>
                       <seats  v-model="seatModelInfo"
                       :gridSize="8"
@@ -263,66 +292,81 @@
         </el-dialog>
 
         <el-dialog title="添加设施" :visible.sync="dialogFacilityDetailVisible"
-        :close-on-click-modal="false"
+        :close-on-click-modal="false" :modal="false"
          width="652px"  custom-class='dialog-model-detail'>
            <el-row>
-               <el-col :span="16">
-          <el-form>
-            <el-form-item label="设施朝向" v-if="facilityInfo.facilityType!=='table'">
-                <el-select v-model="facilityInfo.facilityOrientation" placeholder="请选择">
+            <el-col :span="16">
+            <el-form  label-position="left" :rules="facilityRules"
+             ref='facilityFormRef' :model="facilityInfo">
+              <el-form-item label="设施朝向" v-show="facilityInfo.facilityType!=='table'"
+              label-width="92px">
+                <el-select v-model="facilityInfo.facilityOrientation"
+                    placeholder="请选择" style="width:300px">
                   <el-option
                     v-for="item in orientations"
                     :key="item.value"
                     :label="item.label"
                     :value="item.value">
                   </el-option>
-            </el-select>
-            </el-form-item>
-            <el-form-item >
-            </el-form-item>
-              <el-form-item label="设施长度" label-width="120px"
-              v-if="facilityInfo.facilityType!=='door'">
-                <el-input-number v-model="facilityInfo.facilityWidth"
-                :min="1" :max="18" label="设施长度"  controls-position="right"></el-input-number>
-            </el-form-item>
-              <el-form-item label="设施高度" label-width="120px"
-               v-if="facilityInfo.facilityType==='rostrum'
-                    ||facilityInfo.facilityType==='table'">
-              <el-input-number v-model="facilityInfo.facilityHeight"
-               :min="1" :max="8"  controls-position="right"></el-input-number>
-            </el-form-item>
-            <el-form-item label="座位数量" label-width="120px"
-               v-if="facilityInfo.facilityType==='rostrum'">
+              </el-select>
+              </el-form-item>
+              <el-row>
+                <el-col :span="12">
+              <el-form-item label="设施长度" label-width="92px"
+                v-if="facilityInfo.facilityType!=='door'" >
+                  <el-input-number v-model="facilityInfo.facilityWidth"
+                  :min="facilityInfo.facilityType==='mainScreen'?3:1"
+                  :max="facilityInfo.facilityType==='mainScreen'?10:12" label="设施长度"
+                  controls-position="right"></el-input-number>
+              </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                       <!--如果是主席台（设置单独主席台高度）-->
+                  <el-form-item label="设施高度" label-width="92px"
+                  v-if="facilityInfo.facilityType==='rostrum'" >
+                  <el-input-number v-model="rostrumHeight"
+                  :min="1" :max="8"  controls-position="right"></el-input-number>
+                </el-form-item>
+                <!--如果是会议桌-->
+                  <el-form-item label="设施高度" label-width="92px"
+                  v-if="facilityInfo.facilityType==='table'">
+                  <el-input-number v-model="facilityInfo.facilityHeight"
+                  :min="1" :max="8"  controls-position="right"></el-input-number>
+                </el-form-item>
+                </el-col>
+              </el-row>
+            <el-form-item label="座位数量" label-width="92px"
+               v-if="facilityInfo.facilityType==='rostrum'"   prop="holdSeatNum">
               <el-input-number v-model="facilityInfo.holdSeatNum"
-              :min="1" :max="18"  controls-position="right"></el-input-number>
+              :min="0" :max="12"  controls-position="right"></el-input-number>
             </el-form-item>
           </el-form>
-               </el-col>
-               <el-col :span="8">
-                 <div  class='div-preview'>
-                    <facility
-                      :gridSize="parseInt(10)"
-                      :facilityWidth="parseInt(facilityInfo.facilityWidth)"
-                      :facilityHeight="parseInt(facilityInfo.facilityHeight)"
-                      :facilityType="facilityInfo.facilityType"
-                      :holdSeatNum="parseInt(facilityInfo.holdSeatNum)"
-                      :facilityOrientation="facilityInfo.facilityOrientation"
-                      :reqType="2">
-                    </facility>
-                 </div>
-               </el-col>
-           </el-row>
+        </el-col>
+          <el-col :span="8">
+            <div  class='div-preview'>
+              <facility
+                :gridSize="parseInt(16)"
+                :facilityWidth="parseInt(facilityInfo.facilityWidth)"
+                :facilityHeight="parseInt(facilityInfo.facilityHeight)"
+                :facilityType="facilityInfo.facilityType"
+                :holdSeatNum="parseInt(facilityInfo.holdSeatNum)"
+                :facilityOrientation="facilityInfo.facilityOrientation"
+                :reqType="2"
+                :doubleBorder="3"
+                :isPreview="true">
+              </facility>
+            </div>
+          </el-col>
+      </el-row>
 
         <div slot="footer" class="dialog-footer">
-          <el-button @click="upFacility">上一步</el-button>
+          <el-button @click="upFacility" v-if="editInfo.id===''">上一步</el-button>
           <el-button type="primary" @click="okFacility">确 定</el-button>
         </div>
         </el-dialog>
        <!--编辑座位时候的遮罩层-->
-        <div :style="maskStyle" class="mask" @click="endEditState" v-if="editState"></div>
-
-
-  <div class="tc mb0_item pb34 pt50" style="background: #F5F6FB;margin-bottom:0;">
+      <div class="mask" @click="endEditState" v-if="editState"></div>
+      <div class="tc mb0_item pb34 pt50" style="background: #F5F6FB;margin-bottom:0;">
       <el-button type="primary" class="w100" plain @click="cancel">取消</el-button>
       <el-button type="primary" class="w100" @click="saveAndQuit">保存并退出</el-button>
     </div>
@@ -334,8 +378,6 @@ import wall from './component/wall.vue';
 import seats from './component/seats.vue';
 import facility from './component/facility.vue';
 
-
-
 export default {
   components: {
     wall,
@@ -344,27 +386,67 @@ export default {
   },
   // 监听属性
   watch: {
-    // seatTemplate.layoutArray(value){
-    // }
+    // 计算围墙
+    editState(val) {
+      if (!val) {
+        this.computeWall();
+      }
+    },
+    rostrumHeight(val) {
+      if (this.facilityInfo.holdSeatNum > 0) {
+        this.facilityInfo.facilityHeight = val + 1;
+      } else {
+        this.facilityInfo.facilityHeight = val;
+      }
+    },
+    // eslint-disable-next-line func-names
+    'facilityInfo.holdSeatNum': function (val) {
+      if (val > 0) {
+        this.facilityInfo.facilityHeight = this.rostrumHeight + 1;
+      } else {
+        this.facilityInfo.facilityHeight = this.rostrumHeight;
+      }
+    },
   },
   // 计算属性 围墙的位置
   computed: {
-    // 主席台只能添加一个
-    containRostrum() {
-      let isContain = false;
-      this.seatTemplate.facilities.forEach((item) => {
-        if (item.facilityType === 'rostrum') {
-          isContain = true;
-        }
-      });
-      return isContain;
+    // 绑定 朝向 和门的方向
+    orientations() {
+      if (this.facilityInfo.facilityType === 'door' && this.dialogFacilityDetailVisible) {
+        return [{
+          value: 'u',
+          label: '横向',
+        }, {
+          value: 'l',
+          label: '纵向',
+        }];
+      }
+      return [{
+        value: 'u',
+        label: '朝上',
+      }, {
+        value: 'd',
+        label: '朝下',
+      }, {
+        value: 'l',
+        label: '朝左',
+      }, {
+        value: 'r',
+        label: '朝右',
+      }];
     },
-
     // 根据座位数计算模型座位区域宽度
     seatModelArrayWidth() {
-      // 如果类型是'uShape' 或者'gyrationShape
-      if (this.seatModelInfo.seatModelType === 'uShape'
-           || this.seatModelInfo.seatModelType === 'gyrationShape') {
+      // 如果类型是'uShape'
+      if (this.seatModelInfo.seatModelType === 'uShape') {
+        // 朝上或者朝下
+        if (this.seatModelInfo.orientation === 'u' || this.seatModelInfo.orientation === 'd') {
+          return this.seatModelInfo.horizontalSeatNum + 2;
+        }// 朝左或者朝右
+        return this.seatModelInfo.verticalSeatNum + 1;
+
+        // 回型'gyrationShape
+      } if (this.seatModelInfo.seatModelType === 'gyrationShape') {
         return this.seatModelInfo.horizontalSeatNum + 2;
       }
       return this.seatModelInfo.horizontalSeatNum;
@@ -373,13 +455,17 @@ export default {
     seatModelArrayHeight() {
       // 如果类型是'uShape'
       if (this.seatModelInfo.seatModelType === 'uShape') {
-        return this.seatModelInfo.verticalSeatNum + 1;
+        // 朝上或者朝下
+        if (this.seatModelInfo.orientation === 'u' || this.seatModelInfo.orientation === 'd') {
+          return this.seatModelInfo.verticalSeatNum + 1;
+        }// 朝左或者朝右
+        return this.seatModelInfo.horizontalSeatNum + 2;
       } if (this.seatModelInfo.seatModelType === 'gyrationShape') { // 如果类型是 ,'gyrationShape
         return this.seatModelInfo.verticalSeatNum + 2;
       }
       return this.seatModelInfo.verticalSeatNum;
     },
-
+    // 根据状态计算设施是否可以编辑
     enableEventclass() {
       return this.enableEvent ? '' : 'unenable-events';
     },
@@ -402,54 +488,103 @@ export default {
       };
     },
 
-    showBlock(){
+    // 是否显示画布格子
+    showBlock() {
       return (type) => {
-        if (type!==0){
-          return  'square-noneblock'
+        if (type !== 0) {
+          return 'square-noneblock';
         }
-        return  'square-block'
-      }
+        return 'square-block';
+      };
     },
 
+    // 不同座位显示不同状态
     seatStyle() {
-      return (type, orientation) => {
+      return (type, orientation, selected) => {
         if (type === 1) {
           switch (orientation) {
           case 'l':
-            return 'normal-seat-left';
+            return selected ? 'normal-seat-selected-left selectSeat' : 'normal-seat-left selectSeat';
           case 'r':
-            return 'normal-seat-right';
+            return selected ? 'normal-seat-selected-right selectSeat' : 'normal-seat-right selectSeat';
           case 'u':
-            return 'normal-seat-up';
+            return selected ? 'normal-seat-selected-up selectSeat' : 'normal-seat-up selectSeat';
           case 'd':
-            return 'normal-seat-down';
+            return selected ? 'normal-seat-selected-down selectSeat' : 'normal-seat-down selectSeat';
           default:
-            return 'normal-seat-down';
+            return selected ? 'normal-seat-selected-down selectSeat' : 'normal-seat-down selectSeat';
           }
         } else if (type === 2) {
           switch (orientation) {
           case 'l':
-            return 'senior-seat-left';
+            return selected ? 'senior-seat-selected-left selectSeat' : 'senior-seat-left selectSeat';
           case 'r':
-            return 'senior-seat-right';
+            return selected ? 'senior-seat-selected-right selectSeat' : 'senior-seat-right selectSeat';
           case 'u':
-            return 'senior-seat-up ';
+            return selected ? 'senior-seat-selected-up selectSeat' : 'senior-seat-up selectSeat';
           case 'd':
-            return 'senior-seat-down';
+            return selected ? 'senior-seat-selected-down selectSeat' : 'senior-seat-down selectSeat';
           default:
-            return 'senior-seat-down';
+            return selected ? 'senior-seat-selected-down selectSeat' : 'senior-seat-down selectSeat';
           }
         } else return '';
       };
     },
+
+    /** 校验 */
+    // 主席台只能添加一个
+    containRostrum() {
+      let isContain = false;
+      this.seatTemplate.facilities.forEach((item) => {
+        if (item.facilityType === 'rostrum') {
+          isContain = true;
+        }
+      });
+      return isContain;
+    },
+
+    // 主席台座位和主席台长度校验
+    // rostrumRules() {
+
+    // },
   },
 
   data() {
+    // 校验模板名
+    const validateName = (rule, value, callback) => {
+      if (value === '') {
+        callback(new Error('请输入模板名称'));
+      } else if (this.seatTemplateNameArr
+      && this.seatTemplateNameArr.indexOf(value) !== -1) {
+        callback(new Error('模板名称不能重复'));
+      } else {
+        callback();
+      }
+    };
+    const validateHoldRostrum = (rule, value, callback) => {
+      if (this.facilityInfo.facilityType === 'rostrum' && this.facilityInfo.facilityWidth < value) {
+        callback(new Error('主席台座位数量不能大于主席台长度!'));
+      } else if (this.facilityInfo.facilityType === 'rostrum' && value > 0
+       && (this.facilityInfo.facilityWidth + value) % 2 !== 0) {
+        callback(new Error('座位数量须与主席台长度奇偶一致!'));
+      } else {
+        callback();
+      }
+    };
+
     return {
+      nameEdit: false,
+      reactArea: {
+        startX: 0,
+        startY: 0,
+        endX: 0,
+        endY: 0,
+        scrollTop: 0,
+      },
+      isMouseDown: false,
+      areaSelect: null,
       // 设施座位不可放置状态
-      forbidden:false,
-      // 遮罩层的样式
-      maskStyle: null,
+      forbidden: false,
       // 座位编辑div 显示
       editDivStyle: null,
       // 网格的左+右边框宽度
@@ -492,14 +627,15 @@ export default {
       // 添加设施时记录的当前要添加的设施信息
       facilityInfo: {
         id: 0, // 设施id（用来区分相同设施，便于编辑删除）
-        topIndex: 2, // 设施顶部位于布局的第几格
-        leftIndex: 2, // 设施左边部分位于布局的第几格
-        facilityWidth: 2, // 设施横向占多少格
-        facilityHeight: 2, // 设施纵向占多少格
-        facilityType: '', // 设施类型 'table'桌子,'rostrum' 主席台,'mainScreen' 主屏幕,'door' 门
-        holdSeatNum: 2, // 设施容纳的座位数量
+        topIndex: 0, // 设施顶部位于布局的第几格
+        leftIndex: 0, // 设施左边部分位于布局的第几格
+        facilityWidth: 0, // 设施横向占多少格
+        facilityHeight: 0, // 设施纵向占多少格
+        facilityType: '', // 设施类型 'table'桌子,'rostrum' 主席台,'mainScreen' 主屏幕,'door' 入口
+        holdSeatNum: 0, // 设施容纳的座位数量
         facilityOrientation: 'u', // 设施朝（上下左右 依次 u d l r）默认朝上
       },
+      rostrumHeight: 1, // 主席台高度
       // 座位模板信息
       seatTemplate: {
         /*
@@ -508,12 +644,13 @@ export default {
             type：'普通座位':1,高管座：2  设施：4 围墙 9，围墙上的门：8
             orientation：座位或者设施的朝向
             id: 设施存设施id，座位存参会人（没有为空）
-            lable：编号
+            label：编号
           }
         */
         layoutArray: [], // 布局的二维数组
         facilities: [], // 设施信息
         name: '', // 模板名称
+        id: '', // 模板id
         wallWidth: 0, // 围墙的长
         wallHeight: 0, // 围墙的高
         wallLeft: 0, // 围墙Left位置
@@ -540,22 +677,22 @@ export default {
         label: '高管座',
       }],
       // 座位方向 编辑座位时候用
-      seatOrientation: '',
-      // 朝向
-      orientations: [{
-        value: 'u',
-        label: '向上',
-      }, {
-        value: 'd',
-        label: '向下',
-      }, {
-        value: 'l',
-        label: '向左',
-      }, {
-        value: 'r',
-        label: '向右',
-      }],
-      value: '',
+      seatOrientation: 'u',
+      // 已有的模板名称
+      seatTemplateNameArr: [],
+      rules: {
+        name: [
+          { required: true, validator: validateName, trigger: 'blur' },
+        ],
+      },
+      facilityRules: {
+        // facilityWidth: [
+        //   { required: true, validator: validateRostrumWidth, trigger: 'blur' },
+        // ],
+        holdSeatNum: [
+          { required: true, validator: validateHoldRostrum, trigger: 'blur' },
+        ],
+      },
     };
   },
 
@@ -623,7 +760,8 @@ export default {
           if (temp !== -1) break;
         }
         // 围墙变化清空门
-        if (this.seatTemplate.wallWidth !== right - left + 5 || this.seatTemplate.wallHeight !== bottom - top + 5
+        if (this.seatTemplate.wallWidth !== right - left + 5
+        || this.seatTemplate.wallHeight !== bottom - top + 5
         || this.seatTemplate.wallTop !== top - 2 || this.seatTemplate.wallLeft !== left - 2) {
           for (let i = 0; i < this.seatTemplate.facilities.length; i += 1) {
             if (this.seatTemplate.facilities[i].facilityType === 'door') {
@@ -679,17 +817,39 @@ export default {
     // 确定添加设施
     okFacility() {
       // new 一个设施
+      if (this.editInfo.id !== '') {
+        this.removeFacilities();
+        for (let i = 0; i < this.seatTemplate.facilities.length; i += 1) {
+          if (this.seatTemplate.facilities[i].id === this.editInfo.id) {
+            this.facilityInfo = this.seatTemplate.facilities[i];
+            this.editInfo.id = '';
+            break;
+          }
+        }
+      }
+
       // 关闭设施设置对话框
-      this.dialogFacilityDetailVisible = false;
-      this.showDraggFacility = true;
-      this.enableEvent = false;// 添加设施时禁用已有设施的点击编辑事件
+      this.$refs.facilityFormRef.validate((valid) => {
+        if (valid) {
+          this.dialogFacilityDetailVisible = false;
+          this.showDraggFacility = true;
+          this.enableEvent = false;// 添加设施时禁用已有设施的点击编辑事件
+        }
+      });
     },
     // 设施选择
     nextFacility(type) {
       if (type === 'rostrum' && this.containRostrum) {
-        console.log('已经包含主席台');
+        this.$message.warning({
+          message: '主席台只能添加一个，请进行编辑或删除后再次添加～',
+          center: true,
+          duration: 5000,
+          showClose: true,
+          customClass: 'cusPosit warnNotice',
+        });
         return;
       }
+
       // 选择设施 的对话框关闭
       this.dialogFacilityVisible = false;
       // this.seatModelInfo.seatModelType = type
@@ -704,8 +864,10 @@ export default {
         this.facilityInfo.facilityWidth = 3;
         this.facilityInfo.facilityOrientation = 'u';
       } else if (type === 'rostrum') {
+        this.facilityInfo.facilityWidth = 3;
         this.facilityInfo.facilityHeight = 2;
-        this.facilityInfo.facilityHeight = 2;
+        this.facilityInfo.holdSeatNum = 1;
+        this.rostrumHeight = 1;
         this.facilityInfo.facilityOrientation = 'u';
       } else if (type === 'table') {
         // 会议桌不用设置方向
@@ -726,7 +888,16 @@ export default {
     },
     // 添加单个座位
     addSeat() {
-       this.enableEvent = false;
+      this.cancelEdit();// 取消所有正在编辑的selected 状态
+      this.$message.warning({
+        message: '点击画布外，取消添加座位',
+        center: true,
+        duration: 10000,
+        showClose: true,
+        customClass: 'cusPosit warnNotice',
+      });
+
+      this.enableEvent = false;
       this.enableAddSeat = true;
     },
     // 清空全部
@@ -769,15 +940,25 @@ export default {
       this.seatTemplate.wallHeight = 0;
       this.seatTemplate.wallWidth = 0;
     },
-    // 点击编辑座位
+    // 点击编辑设施
     editFacility(fac) {
       // 在指定位置 显示出编辑框
-      const left = (fac.leftIndex + fac.facilityWidth / 2) * this.gridSize;
-      const top = (fac.topIndex + fac.facilityHeight) * this.gridSize;
+      this.cancelEdit();// 先取消所有的编辑select 状态
+      fac.selected = true;
+      let left = (fac.leftIndex + fac.facilityWidth) * (this.gridSize + this.doubleBorder);
+      let top = (fac.topIndex + fac.facilityHeight) * (this.gridSize + this.doubleBorder);
+
+      if ((fac.leftIndex + fac.facilityWidth) > 15) {
+        left -= 356;
+      }
+      if ((fac.topIndex + fac.facilityHeight) > 15) {
+        top -= 300;
+      }
+
       const style = `left: ${left}px;top: ${top}px;width:314px;height:226px`;
 
       if (fac.facilityType === 'door') {
-        this.editInfo.type = '门';
+        this.editInfo.type = '入口';
       } else if (fac.facilityType === 'mainScreen') {
         this.editInfo.type = '主屏幕';
       } else if (fac.facilityType === 'rostrum') {
@@ -787,6 +968,7 @@ export default {
       } else {
         this.editInfo.type = '';
       }
+      this.facilityInfo = JSON.parse(JSON.stringify(fac));
       this.editInfo.id = fac.id;
       this.editDivStyle = style;
       this.showEditForm = true;
@@ -794,31 +976,15 @@ export default {
     // 删除选中的设施或座位
     deleteItems() {
       // 如果编辑的是座位 直接遍历二维数组
-      if (this.editInfo.type === '座位') {
+      if (this.editInfo.type === '座位') { // 删除单个座位
         this.seatTemplate.layoutArray[this.editInfo.top][this.editInfo.left] = {
           type: 0, id: '', label: '', orientation: '',
         };
+      } else if (this.editInfo.type === '多个座位') { // 删除多个座位
+        this.modifySeats('delete');
       } else {
-        // 删除设施数组中的该设施对象
-        for (let i = 0; i < this.seatTemplate.facilities.length; i += 1) {
-          if (this.seatTemplate.facilities[i].id === this.editInfo.id) {
-            this.seatTemplate.facilities.splice(i, 1);
-            break;
-          }
-        }
-        // 将二维数组修设施占位部分type 值修改为0(此处可后续优化)
-        for (let i = 0; i < this.rows; i += 1) {
-          for (let j = 0; j < this.columns; j += 1) {
-            if (this.seatTemplate.layoutArray[i][j].id === this.editInfo.id) {
-              this.seatTemplate.layoutArray[i][j] = {
-                type: 0, id: '', label: '', orientation: '',
-              };
-            }
-          }
-        }
+        this.removeFacilities();
       }
-      // 计算围墙
-      this.computeWall();
       this.showEditForm = false;
     },
     // 编辑座位或者设施 时的确定按钮或编辑设施事件
@@ -827,49 +993,132 @@ export default {
         this.seatTemplate.layoutArray[this.editInfo.top][this.editInfo.left] = {
           type: this.seatType, id: '', label: '', orientation: this.seatOrientation,
         };
-        this.showEditForm = false;
+      } else if (this.editInfo.type === '多个座位') {
+        this.modifySeats();
+        this.removeSelectClass();
       } else {
-        // 删除设施数组中的该设施对象
+        this.dialogFacilityDetailVisible = true;
+      }
+      this.showEditForm = false;
+    },
+
+    // 取消编辑状态
+    cancelEdit() {
+      if (this.editInfo.type === '座位') { // 单个座位
+        delete this.seatTemplate.layoutArray[this.editInfo.top][this.editInfo.left].selected;
+      } else if (this.editInfo.type === '多个座位') { // 多个座位
+        this.removeSelectClass();
+      } else { // 设施
         for (let i = 0; i < this.seatTemplate.facilities.length; i += 1) {
           if (this.seatTemplate.facilities[i].id === this.editInfo.id) {
-            this.seatTemplate.facilities.splice(i, 1);
+            delete this.seatTemplate.facilities[i].selected;
+            this.editInfo.id = '';
             break;
           }
         }
-        // 将二维数组修设施占位部分type 值修改为0(此处可后续优化)
-        for (let i = 0; i < this.rows; i += 1) {
-          for (let j = 0; j < this.columns; j += 1) {
-            if (this.seatTemplate.layoutArray[i][j].id === this.editInfo.id) {
-              this.seatTemplate.layoutArray[i][j] = {
-                type: 0, id: '', label: '', orientation: '',
-              };
-            }
-          }
-        }
-        this.dialogFacilityDetailVisible = true;
-        this.showEditForm = false;
       }
-    },
-    // 取消编辑
-    cancelEdit() {
+
       this.showEditForm = false;
     },
+    // 移除框选状态的样式
+    removeSelectClass() {
+      const { length } = document.getElementsByClassName('active-seat');
+      if (length > 0) {
+        for (let i = 0; i < length; i += 1) {
+          if (document.getElementsByClassName('active-seat')[i]) {
+            this.replaceCss(false, document.getElementsByClassName('active-seat')[i].classList);
+            document.getElementsByClassName('active-seat')[i].classList.remove('active-seat');
+            i -= 1;
+          }
+        }
+      }
+    },
+    // 移除设施
+    removeFacilities() {
+      // 删除设施数组中的该设施对象
+      for (let i = 0; i < this.seatTemplate.facilities.length; i += 1) {
+        if (this.seatTemplate.facilities[i].id === this.editInfo.id) {
+          this.seatTemplate.facilities.splice(i, 1);
+          break;
+        }
+      }
+      // 将二维数组修设施占位部分type 值修改为0(此处可后续优化
+      for (let i = 0; i < this.rows; i += 1) {
+        for (let j = 0; j < this.columns; j += 1) {
+          if (this.seatTemplate.layoutArray[i][j].id === this.editInfo.id) {
+            this.seatTemplate.layoutArray[i][j] = {
+              type: 0, id: '', label: '', orientation: '',
+            };
+          }
+        }
+      }
+      // 如果是入口
+      if (this.editInfo.type === '入口') {
+        for (let i = 0; i < this.seatTemplate.doorArea.length; i += 1) {
+          if (this.seatTemplate.doorArea[i].id === this.editInfo.id) {
+            this.seatTemplate.doorArea.splice(i, 1);
+            i -= 1;
+          }
+        }
+      }
+      this.editInfo.id = '';
+    },
+    // 编辑多个座位
+    modifySeats(operation = 'update') {
+      const { length } = document.getElementsByClassName('active-seat');
+      if (length > 0) {
+        for (let i = 0; i < length; i += 1) {
+          const row = document.getElementsByClassName('active-seat')[i].attributes.row.nodeValue;
+          const column = document.getElementsByClassName('active-seat')[i].attributes.column.nodeValue;
+          this.seatTemplate.layoutArray[row][column] = {
+            type: operation === 'update' ? this.seatType : 0, id: '', label: '', orientation: operation === 'update' ? this.seatOrientation : '',
+          };
+        }
+      }
+    },
+
     // 结束编辑状态
     endEditState() {
+      this.cancelEdit();// 取消所有正在编辑的selected 状态
       this.enableAddSeat = false;
       this.showDraggModel = false;
       this.showDraggFacility = false;
       this.showEditForm = false;
-       this.enableEvent = true;
+      this.isMouseDown = false;
+      this.enableEvent = true;
     },
     // 取消模型
     cancel() {
-      this.$router.go(-1);
+      this.$confirm('是否取消保存布局图，是否继续?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }).then(() => {
+        localStorage.removeItem('seatTemplate');
+        this.$router.go(-1);
+      }).catch(() => {
+        // 点取消的提示
+      });
     },
     // 保存并退出
     saveAndQuit() {
-      const params = this.seatTemplate;
-      this.$router.push({ name: '会议室详情', params });
+      this.$refs.templateform.validate((valid) => {
+        if (valid) {
+          let no = 1;
+          // 给座位附上编号
+          for (let i = 0; i < this.rows; i += 1) {
+            for (let j = 0; j < this.columns; j += 1) {
+              if (this.seatTemplate.layoutArray[i][j].type === 1
+              || this.seatTemplate.layoutArray[i][j].type === 2) {
+                this.seatTemplate.layoutArray[i][j].id = no.toString();
+                no += 1;
+              }
+            }
+          }
+          localStorage.setItem('seatTemplate', JSON.stringify(this.seatTemplate));
+          this.$router.go(-1);
+        }
+      });
     },
     // 添加门
     addDoor(rowIndex, colIndex, position) {
@@ -882,20 +1131,24 @@ export default {
       const leftIndex = this.seatTemplate.wallLeft + colIndex;
       // 朝上或者朝下方向的门 只能添加在围墙的上方或者下方
       if ((position === 'horizontalsectionleft' || position === 'horizontalsectionright')
-          && (this.facilityInfo.facilityOrientation === 'r' || this.facilityInfo.facilityOrientation === 'l')) {
+          && (this.facilityInfo.facilityOrientation === 'r'
+          || this.facilityInfo.facilityOrientation === 'l')) {
         // step 1 校验位置是否可放
         this.seatTemplate.doorArea.forEach((item) => {
           // 门的位置已经有门，或者门的位置添加超出了围墙边角
-          if (rowIndex === item.top || rowIndex + 1 === item.top || rowIndex < 0 || rowIndex + 1 > this.seatTemplate.wallHeight) {
-            this.forbidden= true;
-            console.log('越界');
-            return ;
+          if (rowIndex === item.top || rowIndex - 1 === item.top
+          || rowIndex < 0 || rowIndex + 1 > this.seatTemplate.wallHeight) {
+            this.forbidden = true;
+            // console.log('越界');
           }
         });
-        this.seatTemplate.doorArea.push({ top: rowIndex, left: colIndex });
-        this.seatTemplate.doorArea.push({ top: rowIndex + 1, left: colIndex });
-        // step3 将设备信息添加到 设备数组中
+        if (this.forbidden) {
+          return;
+        }
         const facilityId = Math.random().toString(36).substr(3, 6);// 生成6位长度的设施ID
+        this.seatTemplate.doorArea.push({ id: facilityId, top: rowIndex, left: colIndex });
+        this.seatTemplate.doorArea.push({ id: facilityId, top: rowIndex + 1, left: colIndex });
+        // step3 将设备信息添加到 设备数组中
         const facilityTmp = {
           id: facilityId,
           topIndex,
@@ -915,18 +1168,19 @@ export default {
         // step 1 校验位置是否可放
         // 门的位置已经有门，或者门的位置添加超出了围墙边角则不能放置
         this.seatTemplate.doorArea.forEach((item) => {
-          if (colIndex === item.left || colIndex + 1 === item.left ||
-          colIndex < 0 || colIndex + 1 > this.seatTemplate.wallWidth) {
-            this.forbidden= true;
-            console.log('越界');
-            return
+          if (colIndex === item.left || colIndex + 1 === item.left
+          || colIndex < 0 || colIndex + 1 > this.seatTemplate.wallWidth) {
+            this.forbidden = true;
+            // console.log('越界');
           }
         });
-
-        this.seatTemplate.doorArea.push({ top: rowIndex, left: colIndex });
-        this.seatTemplate.doorArea.push({ top: rowIndex, left: colIndex + 1 });
-        // step3 将设备信息添加到 设备数组中
+        if (this.forbidden) {
+          return;
+        }
         const facilityId = Math.random().toString(36).substr(3, 6);// 生成6位长度的设施ID
+        this.seatTemplate.doorArea.push({ id: facilityId, top: rowIndex, left: colIndex });
+        this.seatTemplate.doorArea.push({ id: facilityId, top: rowIndex, left: colIndex + 1 });
+        // step3 将设备信息添加到 设备数组中
         const facilityTmp = {
           id: facilityId,
           topIndex,
@@ -953,17 +1207,17 @@ export default {
       if (this.$refs.seatsRef) {
         const newWith = this.seatModelArrayWidth * (this.gridSize + this.doubleBorder);
         const newHeight = this.seatModelArrayHeight * (this.gridSize + this.doubleBorder);
-        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWith / 2)
+        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWith / 2) - 37;
         const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2)
-       + this.$refs.seatWrapperRef.scrollTop;
+        - 37 + this.$refs.seatWrapperRef.scrollTop;
         const style = `left: ${left}px;top: ${top}px;width:${newWith}px;height:${newHeight}px`;
         this.$refs.seatsRef.$el.style = style;
       } else if (this.$refs.facilityRef) { // 移动状态的设施
         const newWith = this.facilityInfo.facilityWidth * (this.gridSize + this.doubleBorder);
         const newHeight = this.facilityInfo.facilityHeight * (this.gridSize + this.doubleBorder);
-        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWith / 2)
+        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWith / 2)  - 37;
         const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2)
-          + this.$refs.seatWrapperRef.scrollTop;
+         - 37 + this.$refs.seatWrapperRef.scrollTop;
         const style = `left: ${left}px;top: ${top}px;width:${newWith}px;height:${newHeight}px`;
         this.$refs.facilityRef.$el.style = style;
       } else if (this.enableAddSeat) { // 添加单个座位
@@ -973,32 +1227,140 @@ export default {
         }
         const top = e.target.offsetTop;
         const left = e.target.offsetLeft;
-        const style = `left: ${left-6}px;top: ${top-6}px;`;
+        const style = `left: ${left - 6}px;top: ${top - 6}px;`;
         this.$refs.addSeatDivRef.style = style;
+      } else if (this.isMouseDown && !this.editState) {
+        this.reactArea.endX = e.clientX;
+        this.reactArea.endY = e.clientY - this.reactArea.scrollTop
+        + this.$refs.seatWrapperRef.scrollTop;
+        let leftValue = 0;
+        let topValue = 0;
+        const widthValue = Math.abs(this.reactArea.startX - this.reactArea.endX);
+        const heightValue = Math.abs(this.reactArea.startY - this.reactArea.endY);
+        if (this.reactArea.startX >= this.reactArea.endX) {
+          leftValue = this.reactArea.endX - this.$refs.seatWrapperRef.offsetLeft - 32;
+        } else {
+          leftValue = this.reactArea.startX - this.$refs.seatWrapperRef.offsetLeft - 32;
+        }
+        if (this.reactArea.startY > this.reactArea.endY) {
+          topValue = this.reactArea.endY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop - 50;
+        } else {
+          topValue = this.reactArea.startY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop - 50;
+        }
+        // 判断同时有宽高才开始画虚线框
+
+        if (this.reactArea.startX !== this.reactArea.endX
+        && this.reactArea.startY !== this.reactArea.endY) {
+          const style = `left: ${leftValue}px;top: ${topValue}px;
+                    width: ${widthValue}px;height: ${heightValue}px;`;
+          this.$refs.selectedArea.style = style;
+        }
+        const children = this.$refs.innerSeatWrapperRef.getElementsByClassName('selectSeat');
+        const childrenHeight = this.gridSize + 5;
+        const childrenWidth = this.gridSize + 5;
+        for (let i = 0; i < children.length; i += 1) {
+          // 每个元素的位置
+          const { offsetLeft } = children[i];
+          const { offsetTop } = children[i];
+          // 每个li元素的宽高
+          const endPositionH = childrenHeight + offsetTop;
+          const endPositionW = childrenWidth + offsetLeft;
+          // 五个条件满足一个就可以判断被选择
+          // 一是右下角在选择区域内
+          const require1 = endPositionH > topValue && endPositionW > leftValue
+          && endPositionH < topValue + heightValue && endPositionW < leftValue + widthValue;
+          // 二是左上角在选择区域内
+          const require2 = offsetTop > topValue && offsetLeft > leftValue
+          && offsetTop < topValue + heightValue && offsetLeft < leftValue + widthValue;
+          // 三是右上角在选择区域内
+          const require3 = offsetTop > topValue && offsetLeft + childrenWidth > leftValue
+          && offsetTop < topValue + heightValue
+          && offsetLeft + childrenWidth < leftValue + widthValue;
+          // 四是左下角在选择区域内
+          const require4 = offsetTop + childrenHeight > topValue && offsetLeft > leftValue
+          && offsetTop + childrenHeight < topValue + heightValue
+          && offsetLeft < leftValue + widthValue;
+          // 五选择区域在元素体内
+          const require5 = offsetTop < topValue && offsetLeft < leftValue
+          && offsetTop + childrenHeight > topValue + heightValue
+          && offsetLeft + childrenWidth > leftValue + widthValue;
+          if (require1 || require2 || require3 || require4 || require5) {
+            children[i].classList.add('active-seat');
+            this.replaceCss(true, children[i].classList);
+          } else {
+            children[i].classList.remove('active-seat');
+            this.replaceCss(false, children[i].classList);
+          }
+        }
+      }
+    },
+    // 修改style 属性 target,width,heigth,top,left 为了兼容ie
+    modifyStyle(target, width, heigth, top, left) {
+      if (width !== '') {
+        target.width = width;
+      }
+      if (heigth !== '') {
+        target.height = heigth;
+      }
+      if (top !== '') {
+        target.top = top;
+      }
+      if (left !== '') {
+        target.left = left;
+      }
+    },
+    // 替换样式（toSelected：true 换成选中状态，false 换成未选中状态
+    // target:需要替换样式的目标对象）
+    replaceCss(toSelected, target) {
+      if (toSelected) {
+        target.replace('normal-seat-left', 'normal-seat-selected-left');
+        target.replace('normal-seat-right', 'normal-seat-selected-right');
+        target.replace('normal-seat-up', 'normal-seat-selected-up');
+        target.replace('normal-seat-down', 'normal-seat-selected-down');
+        target.replace('senior-seat-left', 'senior-seat-selected-left');
+        target.replace('senior-seat-right', 'senior-seat-selected-right');
+        target.replace('senior-seat-up', 'senior-seat-selected-up');
+        target.replace('senior-seat-down', 'senior-seat-selected-down');
+      } else {
+        target.replace('normal-seat-selected-left', 'normal-seat-left');
+        target.replace('normal-seat-selected-right', 'normal-seat-right');
+        target.replace('normal-seat-selected-up', 'normal-seat-up');
+        target.replace('normal-seat-selected-down', 'normal-seat-down');
+        target.replace('senior-seat-selected-left', 'senior-seat-left');
+        target.replace('senior-seat-selected-right', 'senior-seat-right');
+        target.replace('senior-seat-selected-up', 'senior-seat-up');
+        target.replace('senior-seat-selected-down', 'senior-seat-down');
       }
     },
     // 鼠标点击事件
     mousedown(e) {
+      // this.modifyStyle();
+      if (!this.editState && e.target.classList.contains('square-block')) {
+        this.reactArea.scrollTop = this.$refs.seatWrapperRef.scrollTop;
+        this.reactArea.startX = e.clientX;
+        this.reactArea.startY = e.clientY;
+        this.isMouseDown = true;
+      }
       // 判断点击的位置是否在格子上
       const row = e.target.getAttribute('row');
       if (!row) {
-        this.forbidden = true ;//不可放置
+        this.forbidden = true;// 不可放置
         return;
       }
       const column = e.target.getAttribute('column');
 
       // 如果有可以拖动的设施或者模型点击后 确定位置取消拖拽状态
-      if (this.showDraggModel) {
+      if (this.showDraggModel) { // 添加模型
         // 计算开始位置
-        const topIndex = parseInt(row,10) - Math.ceil(this.seatModelArrayHeight / 2) + 1;
-        const leftIndex = parseInt(column,10) - Math.ceil(this.seatModelArrayWidth / 2) + 1;
+        const topIndex = parseInt(row, 10) - Math.ceil(this.seatModelArrayHeight / 2) + 1;
+        const leftIndex = parseInt(column, 10) - Math.ceil(this.seatModelArrayWidth / 2) + 1;
         // 将座位的数据添加到二维数组中
         // step 1 判断放置的位置是否被占(除了围墙)
         for (let i = 0; i < this.seatModelArrayHeight; i += 1) {
           for (let j = 0; j < this.seatModelArrayWidth; j += 1) {
             if (this.seatTemplate.layoutArray[i + topIndex][j + leftIndex].type !== 0
             && this.seatModelArray[i][j].type !== 0) {
-              this.forbidden = true ;//不可放置
+              this.forbidden = true;// 不可放置
               return;
             }
           }
@@ -1007,9 +1369,9 @@ export default {
         if (topIndex < 2 || leftIndex < 2 || topIndex + this.seatModelArrayHeight > this.rows - 2
         || leftIndex + this.seatModelArrayWidth > this.columns - 2
         ) {
-          this.forbidden = true ;//不可放置
-          return ;
-          console.log('越界');
+          this.forbidden = true;// 不可放置
+          // console.log('越界');
+          return;
         }
 
         // setp 3 放置座位
@@ -1018,77 +1380,74 @@ export default {
             // 只修改没有座位的位置
             if (this.seatModelArray[i][j].type !== 0) {
               this.seatTemplate.layoutArray[i + topIndex][j + leftIndex] = {
-                type: this.seatModelArray[i][j].type, id: '', label: '',
-                 orientation: this.seatModelArray[i][j].orientation,
+                type: this.seatModelArray[i][j].type,
+                id: '',
+                label: '',
+                orientation: this.seatModelArray[i][j].orientation,
               };
             }
           }
         }
-        // step 3 计算围墙
-        this.computeWall();
+        // // step 3 计算围墙
+        // this.computeWall();
         // step 4 座位模型添加成功移除拖拽的 模型图片
         this.showDraggModel = false;
         this.enableEvent = true;// 开启设施图片的鼠标事件
-
       } else if (this.showDraggFacility) { // 如果添加设施
         // 门不在这里添加
         if (this.facilityInfo.facilityType === 'door') {
-           this.forbidden = true ;//不可放置
+          this.forbidden = true;// 不可放置
           return;
         }
         // 计算开始位置
-        let topIndex = parseInt(row,10) - Math.ceil(this.facilityInfo.facilityHeight / 2) + 1;
-        let leftIndex = parseInt(column,10) - Math.ceil(this.facilityInfo.facilityWidth / 2) + 1;
+        let topIndex = parseInt(row, 10) - Math.ceil(this.facilityInfo.facilityHeight / 2) + 1;
+        let leftIndex = parseInt(column, 10) - Math.ceil(this.facilityInfo.facilityWidth / 2) + 1;
 
         // step 2 判断围墙是否越界
         // 如果是旋转90或这270
-        if (this.facilityInfo.facilityOrientation === 'l' || this.facilityInfo.facilityOrientation === 'r') {
-           topIndex = topIndex - parseInt((this.facilityInfo.facilityWidth - this.facilityInfo.facilityHeight) / 2,10);
-           leftIndex = leftIndex + parseInt((this.facilityInfo.facilityWidth - this.facilityInfo.facilityHeight) / 2,10);
-            if (topIndex < 2 || leftIndex < 2 || topIndex + this.facilityInfo.facilityWidth > this.rows - 2
+        if (this.facilityInfo.facilityOrientation === 'l'
+        || this.facilityInfo.facilityOrientation === 'r') {
+          topIndex -= parseInt((this.facilityInfo.facilityWidth
+           - this.facilityInfo.facilityHeight) / 2, 10);
+          leftIndex += parseInt((this.facilityInfo.facilityWidth
+          - this.facilityInfo.facilityHeight) / 2, 10);
+          if (topIndex < 2 || leftIndex < 2 || topIndex
+          + this.facilityInfo.facilityWidth > this.rows - 2
                   || leftIndex + this.facilityInfo.facilityHeight > this.columns - 2) {
-                     this.forbidden = true ;
-              console.log('越界1');
-              return
-            }
-          // 校验放下去的位置是否空白
-            for (let i = 0; i < this.facilityInfo.facilityHeight; i += 1) {
-              for (let j = 0; j < this.facilityInfo.facilityWidth; j += 1) {
-                if (this.seatTemplate.layoutArray[j + topIndex][i + leftIndex].type !== 0) {
-                  // this.showDraggModel = false;
-                  this.forbidden = true ;//不可放置
-                  console.log('return1')
-                  return;
-                }
-              }
-            }
-            // console.log('LR',topIndexTemp,leftIndexTemp,topIndexTemp+this.seatModelArrayWidth
-            // ,leftIndexTemp+this.seatModelArrayHeight)
-
-
-        } else {
-
-          if (topIndex < 2 || leftIndex < 2 || topIndex + this.facilityInfo.facilityHeight > this.rows - 2
-                || leftIndex + this.facilityInfo.facilityWidth > this.columns - 2) {
-            this.forbidden = true ;
-            console.log('越界2');
+            this.forbidden = true;
+            // console.log('越界');
             return;
           }
-          //校验放下去的位置是否有空白
+          // 校验放下去的位置是否空白
           for (let i = 0; i < this.facilityInfo.facilityHeight; i += 1) {
             for (let j = 0; j < this.facilityInfo.facilityWidth; j += 1) {
-              if (this.seatTemplate.layoutArray[i + topIndex][j + leftIndex].type !== 0) {
+              if (this.seatTemplate.layoutArray[j + topIndex][i + leftIndex].type !== 0) {
                 // this.showDraggModel = false;
-                 this.forbidden = true ;
-                console.log('return1')
+                this.forbidden = true;// 不可放置
+                // console.log('越界');
                 return;
               }
             }
           }
-
-          // console.log(topIndex,leftIndex,topIndex+this.facilityInfo.facilityHeight,leftIndex+this.facilityInfo.facilityWidth)
-
-
+        } else {
+          if (topIndex < 2 || leftIndex < 2
+           || topIndex + this.facilityInfo.facilityHeight > this.rows - 2
+                || leftIndex + this.facilityInfo.facilityWidth > this.columns - 2) {
+            this.forbidden = true;
+            // console.log('越界');
+            return;
+          }
+          // 校验放下去的位置是否有空白
+          for (let i = 0; i < this.facilityInfo.facilityHeight; i += 1) {
+            for (let j = 0; j < this.facilityInfo.facilityWidth; j += 1) {
+              if (this.seatTemplate.layoutArray[i + topIndex][j + leftIndex].type !== 0) {
+                // this.showDraggModel = false;
+                this.forbidden = true;
+                // console.log('越界');
+                return;
+              }
+            }
+          }
         }
 
         // step3 将设备信息添加到 设备数组中
@@ -1131,56 +1490,85 @@ export default {
           }
         }
 
-        // step 4 计算围墙(添加座位时 围墙与座位之间空一圈)
-        this.computeWall();
+        // // step 4 计算围墙(添加座位时 围墙与座位之间空一圈)
         // 设备添加成功 移除拖拽的设备图片
         this.showDraggFacility = false;
         this.enableEvent = true;
-         // 如果是添加座位
-      } else if (this.enableAddSeat) {
-
+        // 如果是添加座位
+      } else if (this.enableAddSeat) { // 添加单个座位
         // 判断点击的位置是否被占
         if (this.seatTemplate.layoutArray[row][column].type !== 0) {
-           this.forbidden = true ;
+          this.forbidden = true;
           return;
         }
         // 判断是否越界
-        if (row < 2 || column < 2 || parseInt(row, 10) + 1 > this.rows - 2 || parseInt(column, 10) + 1 > this.columns - 2
+        if (row < 2 || column < 2
+         || parseInt(row, 10) + 1 > this.rows - 2 || parseInt(column, 10) + 1 > this.columns - 2
         ) {
-           this.forbidden = true ;
-          console.log('越界');
-          return
+          this.forbidden = true;
+          // console.log('越界');
+          return;
         }
         this.$set(this.seatTemplate.layoutArray[row], column, {
-          type: 1, id: '', label: '', orientation: '',
+          type: 1, id: '', label: '', orientation: 'u',
         });
         // step 3 计算围墙
-      //  this.computeWall();
-      } else { // 编辑单个座位
-        const tempSeatType = this.seatTemplate.layoutArray[row][column].type;
-        // 如果点击的位置没有东西
-        if (tempSeatType === 0) {
-          // 1 普通座位,2 高管座
-          return
-        } else if (tempSeatType === 1 || tempSeatType === 2) {
-          // 显示出编辑框
-          const left = e.target.offsetLeft;
-          const top = e.target.offsetTop;
+      } else { // 编辑单个座位      console.log(row)
+        this.cancelEdit();
+        const tempSeat = this.seatTemplate.layoutArray[row][column];
+        this.seatTemplate.layoutArray[row][column].selected = true;// 换背景图片
+        // 1 普通座位,2 高管座
+        if (tempSeat.type === 1 || tempSeat.type === 2) {
+          // 显示出编辑框的位置
+          let left = e.target.offsetLeft + (this.gridSize + this.doubleBorder) / 2 - 314 / 2;
+          let top = e.target.offsetTop + this.gridSize + this.doubleBorder * 2;
+          if (column > 20) {
+            left -= 314 / 4;
+          }
+          if (column < 3) {
+            left += 314 / 4;
+          }
+          if (row > 15) {
+            top -= 330;
+          }
           const style = `left: ${left}px;top: ${top}px;width:314px;height:226px`;
           this.editDivStyle = style;
           this.editInfo.type = '座位';
           this.editInfo.top = row;
           this.editInfo.left = column;
-          this.seatType = tempSeatType;
-          this.seatOrientation = this.seatTemplate.layoutArray[row][column].orientation;
+          this.seatType = tempSeat.type;
+          this.seatOrientation = tempSeat.orientation;
           this.showEditForm = true;
         }
       }
     },
-    mouseup(){
-      this.forbidden= false;
+    mouseup() {
+      this.forbidden = false;
+      if (!this.editState) {
+        this.isMouseDown = false;
+        let left = parseInt(this.$refs.selectedArea.style.left, 10);
+        let top = parseInt(this.$refs.selectedArea.style.top, 10);
+        const style = `left: 0;top: 0;
+        width: 0px;height: 0px;`;
+        this.$refs.selectedArea.style = style;
+        const { length } = document.getElementsByClassName('active-seat');
+        if (length > 0) {
+          // 显示出编辑框s
+          left += 314 / 2;
+          top += 226 / 2;
+          const styleEdit = `left: ${left}px;top: ${top}px;width:314px;height:226px`;
+          this.editDivStyle = styleEdit;
+          this.editInfo.type = '多个座位';
+          this.showEditForm = true;
+        }
+      }
     },
-
+    editName() {
+      this.nameEdit = true;
+      this.$nextTick(() => {
+        this.$refs.nameInput.focus();
+      });
+    },
     // 初始座位数组
     initSeatArray() {
       // 初始化布局
@@ -1188,7 +1576,7 @@ export default {
         type: 0, id: '', label: '', orientation: '',
       })
         .map(() => Array(this.columns).fill({
-          type: 0, id: '', lable: '', orientation: '',
+          type: 0, id: '', label: '', orientation: '',
         }));
       this.seatTemplate.layoutArray = gridArray;
       // 计算每个格子的尺寸  （画布的长度-（横向格子数+1）*（margin-left+margin-right））/横向格子数
@@ -1199,42 +1587,82 @@ export default {
     },
   },
 
-  created(){
-      let template = Object.keys(this.$route.params)
-      if(template.length===0){
-          // 初始化 布局二维数组
-        this.initSeatArray();
-      }else{
-        this.gridSize = 32;
-        this.dialogModelSelectVisible= false
-        this.seatTemplate = this.$route.params;
+  created() {
+    // 根据参数判断是编辑还是新增
+    const template = typeof (this.$route.params.seatTemplateItem) === 'undefined'
+      ? [] : Object.keys(this.$route.params.seatTemplateItem);
+    this.seatTemplateNameArr = this.$route.params.layoutNameArr;
+
+    if (template.length === 0) { // 新增
+      const tempName = this.$route.params.seatTemplateName;
+      this.seatTemplate.name = tempName === null ? '' : tempName;
+      // 初始化 布局二维数组
+      this.initSeatArray();
+    } else { // 编辑
+      this.gridSize = 32;
+      this.dialogModelSelectVisible = false;
+      this.seatTemplate = this.$route.params.seatTemplateItem;
+      // 编辑的时候校验名称是否重复 除去自身
+      const index = this.seatTemplateNameArr.indexOf(this.seatTemplate.name);
+      if (index !== -1) {
+        this.seatTemplateNameArr.splice(index, 1);
       }
+    }
   },
 
   mounted() {
     // 初始化遮罩层大小
-    this.maskStyle = `{ height: ${document.body.clientHeight}px; height: ${document.body.clientHeight}px;}`;
+    this.maskStyle = `{ height: ${document.body.clientHeight}px;
+    height: ${document.body.clientHeight}px;}`;
   },
 
 };
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
-<style scoped>
+<style scoped lang="less">
+@green: #0DAF9C;
+.active-seat {
+  // background-color: rgba(13, 175, 156, 0.15) !important;
+}
+.name-edit-icon {
+  color: @green;
+  margin-left: 12px;
+  cursor: pointer;
+}
+/deep/ .el-card__body{
+  padding: 15px 15px 0px 0px;
+}
+/deep/.v-selected-area {
+    position: absolute;
+    border: 1px dashed grey;
+    z-index: 2100;
+}
 .vue-input /deep/ .el-input__inner {
     border: 1px solid #fff !important;
+    padding-left: 0;
     }
     .vue-input /deep/.el-input{
       width: 280px;
     }
-</style>
-<style scoped lang="scss">
+ /deep/.el-input-number {
+  width: 90px;
+}
+    /deep/.el-dialog__body {
+    padding: 20px 15px 30px 15px;
+   /deep/ .el-form-item__label{
+     padding:0
+   }
+    }
+    /deep/.el-form-item__label{
+      line-height: 40px;
+    }
 
    /* 编辑操作时的 背景框 */
   .mask {
     width: 100%;
     height: 100%;
-    opacity: 0.6;
+     opacity: 0.2;
      position: fixed;
     top: 0;
     left: 0;
@@ -1256,25 +1684,34 @@ export default {
   }
 
 .btn-wrapper{
+    display: flex;
     width:1060px;
-    margin: 0px auto;
-    height:45px;
+    margin-left: 80px;
+    height:80px;
+    margin-bottom: 15px;
     text-align: left;
-    padding-left: 15px;
-    margin-bottom: 20px;
+    justify-content: space-between;
+    align-items: center;
     button{
       width: 117px;
       height: 36px;
-      margin-right: 10px;
-      background: #0DAF9C;
-      border-radius: 2px;
-      border: 1px solid #0DAF9C;
+      padding: 10px 20px;
+    }
+    .addSeat {
+      color: @green;
+      background: #fff;
+    }
+    .clear-all {
+      color: rgb(51, 62, 94);
+      width: 80px;
+      padding: 0;
+      font-size: 12px;
     }
   }
   .div-icon{
     display: flex;
-    justify-content: flex-end;
-    align-items: flex-start;
+    font-size: 12px;
+    margin-top: 15px;
     div{width: 12px; height: 12px;margin:0px 10px 0px;}
     :nth-child(1) {background: #AFCBE3; }
     :nth-child(3){background: #E7D6C5; }
@@ -1284,8 +1721,8 @@ export default {
   .seat-wrapper{
     // height: 1020px;
     width:1060px;
-    border: 1px solid #0DAF9C;
-    margin: 0 auto;
+    border: 1px solid @green;
+    margin-left: 80px;
     position:relative;
     overflow: auto;
     background: #FCFCFC;
@@ -1295,28 +1732,26 @@ export default {
   }
   /*画布区域大小*/
   .inner-seat-wrapper{
-    width:1000px;
-    margin: 15px 15px ;
+    width:1008px;
+    margin: 15px 25px ;
     top:10px;
     position: relative;
     bottom:0px;
     box-sizing: content-box;
-    left:10px;
     z-index: 1000;
     background: #FCFCFC;
-    border-radius: 2px;
-    border: 0px solid #E4E8EB;
-
   }
   /*画布中小正方形 */
   .square-block{
     /* float:left; */
-    border-radius: 2px;
-    border: white 5px solid;
+    // border-radius: 2px;
+    // border: #FCFCFC 5px solid;
+    margin:5px;
     background: #F2F4F5;
   }
  .square-noneblock{
-    border: white 5px solid;
+
+     margin:5px;
     background: white;
 
  }
@@ -1330,86 +1765,89 @@ export default {
     cursor: pointer;
   }
  .normal-seat-left{
-     background: url('../../../assets/image/web/seat/normal-seat-left.svg') center center no-repeat;
+     background: url('../../../assets/image/web/seat/normal-seat-left.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-    line-height: 42px;
   }
  .normal-seat-right{
-    background: url('../../../assets/image/web/seat/normal-seat-right.svg') center center no-repeat;
+    background: url('../../../assets/image/web/seat/normal-seat-right.svg')
+      center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
    .normal-seat-up{
-   background: url('../../../assets/image/web/seat/normal-seat-up.svg') center center no-repeat;
+    background: url('../../../assets/image/web/seat/normal-seat-up.svg')
+     center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
  .normal-seat-down{
-    background: url('../../../assets/image/web/seat/normal-seat-down.svg') center center no-repeat;
+    background: url('../../../assets/image/web/seat/normal-seat-down.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
    .normal-seat-selected-left{
-     background: url('../../../assets/image/web/seat/normal-seat-selected-left.svg') center center no-repeat;
+     background: url('../../../assets/image/web/seat/normal-seat-selected-left.svg')
+     center center no-repeat;
     background-size: 100% 100%;
-    line-height: 42px;
+
   }
  .normal-seat-selected-right{
-    background: url('../../../assets/image/web/seat/normal-seat-selected-right.svg') center center no-repeat;
+    background: url('../../../assets/image/web/seat/normal-seat-selected-right.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
    .normal-seat-selected-up{
-   background: url('../../../assets/image/web/seat/normal-seat-selected-up.svg') center center no-repeat;
+   background: url('../../../assets/image/web/seat/normal-seat-selected-up.svg')
+      center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
  .normal-seat-selected-down{
-    background: url('../../../assets/image/web/seat/normal-seat-selected-down.svg') center center no-repeat;
+    background: url('../../../assets/image/web/seat/normal-seat-selected-down.svg')
+    center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
   .senior-seat-left{
-     background: url('../../../assets/image/web/seat/senior-seat-left.svg') center center no-repeat;
+     background: url('../../../assets/image/web/seat/senior-seat-left.svg')
+       center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
+
   }
  .senior-seat-right{
-    background: url('../../../assets/image/web/seat/senior-seat-right.svg') center center no-repeat;
+    background: url('../../../assets/image/web/seat/senior-seat-right.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
   .senior-seat-down{
-     background: url('../../../assets/image/web/seat/senior-seat-down.svg') center center no-repeat;
+    background: url('../../../assets/image/web/seat/senior-seat-down.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
-     .senior-seat-up{
-     background: url('../../../assets/image/web/seat/senior-seat-up.svg') center center no-repeat;
+  .senior-seat-up{
+    background: url('../../../assets/image/web/seat/senior-seat-up.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
-    .senior-seat-selected-left{
-     background: url('../../../assets/image/web/seat/senior-seat-selected-left.svg') center center no-repeat;
+ .senior-seat-selected-left{
+    background: url('../../../assets/image/web/seat/senior-seat-selected-left.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
  .senior-seat-selected-right{
-    background: url('../../../assets/image/web/seat/senior-seat-selected-right.svg') center center no-repeat;
+    background: url('../../../assets/image/web/seat/senior-seat-selected-right.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
   .senior-seat-selected-down{
-     background: url('../../../assets/image/web/seat/senior-seat-selected-down.svg') center center no-repeat;
+    background: url('../../../assets/image/web/seat/senior-seat-selected-down.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
-     .senior-seat-selected-up{
-     background: url('../../../assets/image/web/seat/senior-seat-selected-up.svg') center center no-repeat;
+ .senior-seat-selected-up{
+    background: url('../../../assets/image/web/seat/senior-seat-selected-up.svg')
+    center center no-repeat;
     background-size: 100% 100%;
-   line-height: 42px;
   }
-
   .senior-seat{
     background-size: 100% 100%;
   }
@@ -1431,15 +1869,9 @@ export default {
     background: rgba(253, 87, 81, 0.15);
     border-radius:2px;position: absolute;
   }
-  .edit-form {
-    // pointer-events: none;
-    position: absolute;
-  }
-
   .unenable-events{
       pointer-events: none;
   }
-
   .grid-content {
     width: 132px;
     height: 132px;
@@ -1448,6 +1880,11 @@ export default {
      // 居中 （flex）
       // box-sizing:border-box;
     display: grid;
+    display: -ms-grid;
+    // -ms-grid-columns: 1fr auto 1fr;
+    // grid-template-columns: 1fr auto 1fr;
+        -ms-vertical-align: middle;
+         -ms-text-align: center;
     vertical-align: middle;
     text-align: center;
     img {
@@ -1456,7 +1893,7 @@ export default {
        display: block;
     }
     &:hover{
-      border: 1px solid #0DAF9C;
+      border: 1px solid @green;
       background: #F3FFFE;
       #table{
        content: url('../../../assets/image/web/seat/table-hover.svg');
@@ -1474,23 +1911,26 @@ export default {
   }
   .dialog-model{
     height: 252px;
-    background: #FFFFFF;
+    background: #F3FFFE;
 
   }
  .dialog-model-detail{
     height: 390px;
   }
   .div-preview{
-    display:flex;
+    display: flex;
     justify-content:center;
     align-items:center;
     width: 197px;
     height: 198px;
-    background: #F4FFFE;
     opacity: 0.42;
     border: 1px solid #86D7CD;
+    background:
+      -webkit-linear-gradient(top, transparent 65px, #86D7CD 66px),
+      -webkit-linear-gradient(left, transparent 65px, #86D7CD 66px);
+    background-color: #F4FFFE;
+    background-size: 66px 66px;
   }
-
   .tipsSpan{
       font-size: 10px;
       font-family: PingFangSC-Regular, PingFang SC;
@@ -1498,4 +1938,37 @@ export default {
       color: #B2C7E3;
       line-height: 14px;
   }
+  .edit-form {
+    // pointer-events: none;
+    position: absolute;
+
+  }
+ .edit-btn-wrapper{
+   button{
+      width: 64px;
+      height: 28px;
+      border-radius: 2px;
+      font-size: 14px;
+      font-family: PingFangSC-Regular, PingFang SC;
+      font-weight: 400;
+      line-height: 4px;
+      float:right
+    }
+    .delete-btn{
+      float: left;
+          color: #F56C6C;
+          background: #fff;
+          border: none;
+          width:70px;
+      }
+ }
+ .unselect {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -ms-user-select: none;
+    -o-user-select: none;
+     user-select: none;
+}
+
 </style>

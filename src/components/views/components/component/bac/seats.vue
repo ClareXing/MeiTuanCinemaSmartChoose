@@ -8,7 +8,7 @@
         :class="[preClass,seatStyle(seatModelArray[rowIndex][colIndex].type
         ,seatModelArray[rowIndex][colIndex].orientation)]"
          :style="{width:gridSize+'px',height:gridSize+'px'
-        ,border:'#F3FFFE '+ doubleBorder/2+'px solid'}" class="inner-seat">
+        ,border:'white '+ doubleBorder/2+'px solid'}" class="inner-seat">
       </div>
     </div>
      <!--根据相关seats 复原座位-->
@@ -52,8 +52,7 @@ export default {
   },
   computed: {
     dragClass() {
-      // eslint-disable-next-line no-nested-ternary
-      return this.reqType !== 4 ? (this.reqType === 1 ? 'drag' : 'unset-drag') : 'undrag';
+      return this.reqType !== 4 ? (this.reqType === 1? 'drag':'unset-drag') : 'undrag';
     },
 
     preClass() {
@@ -69,34 +68,42 @@ export default {
       return this.renderSeat();
     },
 
-    seatStyle() {
+    // seatStyle() {
+    //   return (type) => {
+    //     if (type !== 1) {
+    //       return 'no-seat';
+    //     }
+    //     if (this.reqType !== 1) {
+    //       return 'pre-normal-seat';
+    //     }
+    //     return 'normal-seat';
+    //   };
+    // },
+
+     seatStyle() {
       return (type, orientation) => {
         // 不是座位
-        if (type !== 1) {
+         if (type !== 1) {
           return 'no-seat';
         }
-        // 预览状态
-        if (this.reqType === 4) {
+        //预览状态
+        if(this.reqType===4){
           return 'pre-normal-seat';
         }
 
-        switch (orientation) {
-        case 'l':
-          // eslint-disable-next-line no-nested-ternary
-          return this.reqType === 1 ? 'normal-seat-selected-left' : (this.reqType === 2 ? 'normal-seat-left' : 'normal-seat-unset-left');
-        case 'r':
-          // eslint-disable-next-line no-nested-ternary
-          return this.reqType === 1 ? 'normal-seat-selected-right' : (this.reqType === 2 ? 'normal-seat-right' : 'normal-seat-unset-right');
-        case 'u':
-          // eslint-disable-next-line no-nested-ternary
-          return this.reqType === 1 ? 'normal-seat-selected-up' : (this.reqType === 2 ? 'normal-seat-up' : 'normal-seat-unset-up');
-        case 'd':
-          // eslint-disable-next-line no-nested-ternary
-          return this.reqType === 1 ? 'normal-seat-selected-down' : (this.reqType === 2 ? 'normal-seat-down' : 'normal-seat-unset-down');
-        default:
-          // eslint-disable-next-line no-nested-ternary
-          return this.reqType === 1 ? 'normal-seat-selected-down' : (this.reqType === 2 ? 'normal-seat-down' : 'normal-seat-unset-down');
-        }
+       switch (orientation) {
+          case 'l':
+            return this.reqType===1?'normal-seat-left':(this.reqType===2?'normal-seat-selected-left':'normal-seat-unset-left');
+          case 'r':
+            return this.reqType===1?'normal-seat-right':(this.reqType===2?'normal-seat-selected-right':'normal-seat-unset-right');
+          case 'u':
+            return this.reqType===1?'normal-seat-up':(this.reqType===2?'normal-seat-selected-up':'normal-seat-unset-up');
+          case 'd':
+            return this.reqType===1?'normal-seat-down':(this.reqType===2?'normal-seat-selected-down':'normal-seat-unset-down');
+          default:
+            return this.reqType===1?'normal-seat-down':(this.reqType===2?'normal-seat-selected-down':'normal-seat-unset-down');
+          }
+
       };
     },
 
@@ -339,16 +346,16 @@ export default {
     display: flex;
     justify-content: center;
     align-items: center;
-    background: #F3FFFE;
+    background: white;
     opacity: 0.5;
-    border-color:#F3FFFE
+    border-color:white
   }
   .pre-square-block{
     float:left;
     display: flex;
     justify-content: center;
     align-items: center;
-    background:#F3FFFE;
+    background:white;
   }
   .drag{
       position: absolute;
@@ -379,74 +386,62 @@ export default {
     cursor: pointer;
   }
    .normal-seat-left{
-     background: url('../../../../assets/image/web/seat/normal-seat-left.svg')
-      center center no-repeat;
+     background: url('../../../../assets/image/web/seat/normal-seat-left.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
  .normal-seat-right{
-    background: url('../../../../assets/image/web/seat/normal-seat-right.svg')
-    center center no-repeat;
+    background: url('../../../../assets/image/web/seat/normal-seat-right.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
    .normal-seat-up{
-   background: url('../../../../assets/image/web/seat/normal-seat-up.svg')
-   center center no-repeat;
+   background: url('../../../../assets/image/web/seat/normal-seat-up.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
  .normal-seat-down{
-    background: url('../../../../assets/image/web/seat/normal-seat-down.svg')
-     center center no-repeat;
+    background: url('../../../../assets/image/web/seat/normal-seat-down.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
      .normal-seat-selected-left{
-     background: url('../../../../assets/image/web/seat/normal-seat-selected-left.svg')
-      center center no-repeat;
+     background: url('../../../../assets/image/web/seat/normal-seat-selected-left.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
  .normal-seat-selected-right{
-    background: url('../../../../assets/image/web/seat/normal-seat-selected-right.svg')
-    center center no-repeat;
+    background: url('../../../../assets/image/web/seat/normal-seat-selected-right.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
    .normal-seat-selected-up{
-   background: url('../../../../assets/image/web/seat/normal-seat-selected-up.svg')
-   center center no-repeat;
+   background: url('../../../../assets/image/web/seat/normal-seat-selected-up.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
  .normal-seat-selected-down{
-    background: url('../../../../assets/image/web/seat/normal-seat-selected-down.svg')
-    center center no-repeat;
+    background: url('../../../../assets/image/web/seat/normal-seat-selected-down.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
      .normal-seat-unset-left{
-     background: url('../../../../assets/image/web/seat/normal-seat-unset-left.svg')
-     center center no-repeat;
+     background: url('../../../../assets/image/web/seat/normal-seat-unset-left.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
  .normal-seat-unset-right{
-    background: url('../../../../assets/image/web/seat/normal-seat-unset-right.svg')
-    center center no-repeat;
+    background: url('../../../../assets/image/web/seat/normal-seat-unset-right.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
    .normal-seat-unset-up{
-   background: url('../../../../assets/image/web/seat/normal-seat-unset-up.svg')
-   center center no-repeat;
+   background: url('../../../../assets/image/web/seat/normal-seat-unset-up.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }
  .normal-seat-unset-down{
-    background: url('../../../../assets/image/web/seat/normal-seat-unset-down.svg')
-    center center no-repeat;
+    background: url('../../../../assets/image/web/seat/normal-seat-unset-down.svg') center center no-repeat;
     background-size: 100% 100%;
    line-height: 42px;
   }

@@ -2,8 +2,7 @@
   <div class='divWall' >
     <div v-for="(row,rowIndex) in wallArray" :key="rowIndex" >
       <div v-for="(item,colIndex) in row" :key="colIndex"
-        class="square-block" :style="{width:(gridSize+borderWidth)+'px'
-          ,height:(gridSize+borderWidth)+'px'}">
+        class="square-block" :style="{width:(borderWidth+10)+'px',height:(borderWidth+10)+'px'}">
             <div class="inner-seat"
               :class="styleObject(wallArray[rowIndex][colIndex])"
               @mousedown="setDoor(rowIndex,colIndex,wallArray[rowIndex][colIndex])"
@@ -17,7 +16,7 @@
 <script>
 export default {
 
-  props: ['isShow', 'gridSize', 'startTopIndex', 'startLeftIndex', 'wallWidth', 'wallHeight', 'borderWidth', 'doorArea'],
+  props: ['isShow','gridSize', 'startTopIndex', 'startLeftIndex', 'wallWidth', 'wallHeight', 'borderWidth', 'doorArea'],
 
   computed: {
 
@@ -101,11 +100,12 @@ export default {
        * oldArray:需要标注画环的二维数组
        */
     hLayout(rows, columns, startRowIndex, startColIndex, oldArray) {
+      console.log(rows, columns, startRowIndex, startColIndex, oldArray)
       for (let i = 0; i < rows - 1; i += 1) {
         oldArray[startRowIndex + i][startColIndex] = 'horizontalsectionleft';
         oldArray[startRowIndex + i][startColIndex + columns - 1] = 'horizontalsectionright';
       }
-      for (let j = 0; j < columns - 1; j += 1) {
+      for (let j = 0; j < columns-1; j += 1) {
         oldArray[startRowIndex + rows - 1][startColIndex + j] = 'verticalsectiondown';
         oldArray[startRowIndex][startColIndex + j] = 'verticalsectionup';
       }
@@ -187,6 +187,6 @@ export default {
   .none{
       opacity: 0.0;
        background-size: 100% 100%;
-       background: #FFFFFF;
+       background: white;
   }
 </style>>

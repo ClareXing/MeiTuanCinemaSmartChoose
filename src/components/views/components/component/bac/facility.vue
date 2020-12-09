@@ -1,58 +1,42 @@
 <template>
 <div :class="[dragClass, transformClass]">
+
      <!--会议桌-->
      <div v-if="facilityType==='table'" :class='divTableClass'
       :style="{width:facilityWidth*(gridSize+doubleBorder)+'px',
       height:facilityHeight*(gridSize+doubleBorder)+'px'}" >
     </div>
      <!--主席台-->
-    <div v-else-if="facilityType === 'rostrum'"  :class='divRostrumBoxClass'>
-      <div class='divRostrumSeats' v-if="holdSeatNum>0">
-         <div :style="{width:(facilityWidth-holdSeatNum)/2*(gridSize+doubleBorder)+'px',
+    <div v-else-if="facilityType === 'rostrum'"  class='divRostrumBox'>
+      <div class='divRostrumSeats'>
+        <div :style="{width:(facilityWidth-holdSeatNum)/2*(gridSize+doubleBorder)+'px',
         height:(gridSize+doubleBorder)+'px'}"></div>
-        <div
-          v-for="(itme,Index) in holdSeatNum"
-          :key="Index"
-         :class="['rostrum-seat__common', rostrumSeatClass]"
-         :value="getArray[Index]"
-         :style="{width:gridSize+'px',height:gridSize+'px',margin:doubleBorder/2+'px'}"
-          @click="onClickSeatArrage(seatMap['主'+getArray[Index]])">
-            <span
-              v-if="!seatView"
-            >{{ seatMap['主'+getArray[Index]] ? seatMap['主'+getArray[Index]].user_name : '' }}</span>
-            <span v-else>主{{getArray[Index]}}</span>
+        <div v-for="(itme,Index) in holdSeatNum" :key="Index"  :class="rostrumSeatClass" :value="getArray[Index]"
+             :style="{width:gridSize+'px',height:gridSize+'px'}">
+            <span>主</span>
         </div>
       </div>
         <div :class='divRostrumClass' :style="{width:facilityWidth*(gridSize+doubleBorder)+'px',
-         height:(holdSeatNum>0?facilityHeight-1:facilityHeight)*(gridSize+doubleBorder)+'px'}">
-         </div>
+         height:(facilityHeight-1)*(gridSize+doubleBorder)+'px'}"></div>
     </div>
      <!--门-->
     <div v-else-if="facilityType === 'door'"
-        :style="{width:(gridSize+doubleBorder)*facilityWidth+'px',
-        height:(gridSize+doubleBorder)*facilityHeight+'px'}" :class ='divDoorClass'>
+        :style="{width:(gridSize)*facilityWidth+'px',height:(gridSize)*facilityHeight+'px'}" :class ='divDoorClass'>
+        <!-- <img src='../../../../assets/image/web/seat/real-door.svg' width="100%" height= "100%"/> -->
     </div>
      <!--屏幕-->
     <div v-else-if="facilityType === 'mainScreen'" class='divMainScreen'>
-       <img :src="reqType === 1?
-       require('../../../../assets/image/web/seat/screen-selected-left.svg'):
+       <img :src="reqType === 1?require('../../../../assets/image/web/seat/screen-selected-left.svg'):
       (reqType === 2?require('../../../../assets/image/web/seat/screen-left.svg'):
-      require('../../../../assets/image/web/seat/screen-unset-left.svg'))"
-       :style="{width:(gridSize+doubleBorder/2)+'px',
-      height:(gridSize)+'px'}" class="bg-img">
+      require('../../../../assets/image/web/seat/screen-unset-left.svg'))" >
        <img v-for="(itme,index) in facilityWidth-2" :key="index"
-       :src="reqType === 1?
-       require('../../../../assets/image/web/seat/screen-selected-middle.svg' ):
+       :src="reqType === 1?require('../../../../assets/image/web/seat/screen-selected-middle.svg'):
       (reqType === 2?require('../../../../assets/image/web/seat/screen-middle.svg'):
-      require('../../../../assets/image/web/seat/screen-unset-middle.svg'))"
-       :style="{width:(gridSize+doubleBorder)+'px',
-      height:(gridSize)+'px'}" class="bg-img">
-       <img  :src="reqType === 1?
-       require('../../../../assets/image/web/seat/screen-selected-right.svg'):
+      require('../../../../assets/image/web/seat/screen-unset-middle.svg'))">
+
+       <img  :src="reqType === 1?require('../../../../assets/image/web/seat/screen-selected-right.svg'):
       (reqType === 2?require('../../../../assets/image/web/seat/screen-right.svg'):
-      require('../../../../assets/image/web/seat/screen-unset-right.svg'))"
-       :style="{width:(gridSize+doubleBorder/2)+'px',
-      height:(gridSize)+'px'}" class="bg-img">
+      require('../../../../assets/image/web/seat/screen-unset-right.svg'))">
     </div>
     <div v-else>
       请选择设施
@@ -61,8 +45,6 @@
 </template>
 
 <script>
-import { isEmpty, isFunction } from 'lodash';
-
 export default {
   /** 画模型 */
   props: {
@@ -90,42 +72,15 @@ export default {
       type: Number,
       default: 0,
     },
-    // 请求类型 可拖拽，固定状态2 不可放置状态3
     reqType: {
       type: Number,
       default: 1,
     }, // 请求类型 可拖拽，固定状态2 不可放置状态3
-    // 是否预览模式
-    isPreview: {
-      type: Boolean,
-      default: false,
-    },
-    // 是否显示座位视图，默认true，若为false，则显示人员视图（用于主席台座位显示）
-    seatView: {
-      type: Boolean,
-      default: true,
-    },
-    // 由座位号位key，座位信息为value（用于主席台座位排座）
-    seatMap: {
-      type: Object,
-      default() {
-        return {};
-      },
-    },
-    // 分配主席台座位给人员
-    handleSeatArrage: {
-      type: Function,
-    },
   },
   computed: {
 
     dragClass() {
-      if (this.reqType === 1) {
-        return 'drag';
-      } if (this.reqType === 2) {
-        return 'undrag';
-      }
-      return 'dragUnset';
+     return  this.reqType === 1 ? 'drag' : (this.reqType === 2?'undrag':'dragUnset');
     },
 
     divWidth() {
@@ -154,50 +109,21 @@ export default {
         return '';
       }
     },
-    divRostrumBoxClass() {
-      if (this.isPreview) {
-        return 'divRostrumBoxPre';
-      }
-      return 'divRostrumBox';
+
+
+    divTableClass(){
+       return this.reqType === 1 ? 'divTableSelected' : (this.reqType === 2?'divTable':'divTableUnset');
     },
 
-    divTableClass() {
-      if (this.reqType === 1) {
-        return 'divTableSelected';
-      } if (this.reqType === 2) {
-        return 'divTable';
-      }
-      return 'divTableUnset';
+    rostrumSeatClass(){
+        return this.reqType === 1 ? 'rostrum-seat-selected' : (this.reqType === 2?'rostrum-seat':'rostrum-seat-unset');
     },
 
-    rostrumSeatClass() {
-      // 若为人员视图
-      if (!this.seatView && !isEmpty(this.seatMap)) {
-        return 'rostrum-seat__input';
-      }
-      if (this.reqType === 1) {
-        return 'rostrum-seat-selected';
-      } if (this.reqType === 2) {
-        return 'rostrum-seat';
-      }
-      return 'rostrum-seat-unset';
+    divRostrumClass(){
+       return this.reqType === 1 ? 'divRostrum-selected' : (this.reqType === 2?'divRostrum':'divRostrum-unset');
     },
-
-    divRostrumClass() {
-      if (this.reqType === 1) {
-        return 'divRostrum-selected';
-      } if (this.reqType === 2) {
-        return 'divRostrum';
-      }
-      return 'divRostrum-unset';
-    },
-    divDoorClass() {
-      if (this.reqType === 1) {
-        return 'divDoor-selected';
-      } if (this.reqType === 2) {
-        return 'divDoor';
-      }
-      return 'divDoor-unset';
+    divDoorClass(){
+             return this.reqType === 1 ? 'divDoor-selected' : (this.reqType === 2?'divDoor':'divDoor-unset');
     },
 
     // 获取主席台编号 数组
@@ -221,34 +147,30 @@ export default {
       const arr2 = [];
       const n = arr.length;
       // 便于测试，由于空格不可见，所以调试时候可以使用*替代空格
-      if (n % 2 === 0) {
+      if (n % 2 == 0) {
         for (let i = n - 1; i > 0; i -= 2) {
           arr2.push(arr[i]);
         }
+        // 1 2 3 4 5
         for (let i = 0; i < n; i += 2) {
-          arr2.push(arr[i]);
+				   arr2.push(arr[i]);
         }
       } else {
         for (let i = n - 1; i >= 0; i -= 2) {
-          arr2.push(arr[i]);
+			  arr2.push(arr[i]);
         }
+        // 1 2 3 4 5
         for (let i = 1; i < n; i += 2) {
-          arr2.push(arr[i]);
+				 arr2.push(arr[i]);
         }
       }
       return arr2;
     },
 
-    // 点击座位进行分配的回调
-    onClickSeatArrage(val) {
-      if (
-        !this.seatView
-        && this.handleSeatArrage
-        && isFunction(this.handleSeatArrage)
-      ) {
-        this.handleSeatArrage(val);
-      }
-    },
+
+  },
+  mounted() {
+    this.getArray;
   },
 
 };
@@ -261,7 +183,7 @@ export default {
       justify-content:center;
       align-items:center;
       pointer-events: none;
-      opacity: 1;
+      opacity: 1.0;
       border-radius: 2px;
       background-size: cover;
       background: rgba(13, 175, 156, 0.15);
@@ -272,7 +194,7 @@ export default {
       justify-content:center;
       align-items:center;
       pointer-events: none;
-      opacity:0.6;
+      opacity: 1.0;
       border-radius: 2px;
       background-size: cover;
       background: rgba(253, 87, 81, 0.15);
@@ -287,25 +209,23 @@ export default {
   .divDoor{
      background: url('../../../../assets/image/web/seat/real-door.svg')
     center center no-repeat;
-    background-size:  100%;
-    background-color:#FFFFFF;
+    background-size: 100% 100%;
   }
    .divDoor-selected{
      background: url('../../../../assets/image/web/seat/real-door-selected.svg')
     center center no-repeat;
-    background-size:  100%;
+    background-size: 100% 100%;
   }
   .divDoor-unset{
      background: url('../../../../assets/image/web/seat/real-door-unset.svg')
     center center no-repeat;
-    background-size: 100%;
+    background-size: 100% 100%;
   }
   .divTable{
      background: #E7D4C0;
      border-radius: 2px;
      width: 100%;
      height: 100%;
-     opacity: 1;
   }
   .divTableSelected{
      background: #0DAF9C;
@@ -322,12 +242,6 @@ export default {
   .divRostrumBox{
       display: flex;
       flex-direction: column ;
-    }
-   .divRostrumBoxPre{
-      display: flex;
-      flex-direction: column ;
-      border: 1px dashed #0DAF9C;
-      border-radius: 4px;
     }
   .divRostrumSeats{
       display: flex;
@@ -347,56 +261,29 @@ export default {
     border-radius: 4px;
   }
  .rostrum-seat{
-
+    border: white 5px solid;
     background: url('../../../../assets/image/web/seat/rostrum-seat-down.svg')
     center center no-repeat;
     background-size: 100% 100%;
     line-height: 42px;
   }
   .rostrum-seat-unset{
-
+    border: white 5px solid;
     background: url('../../../../assets/image/web/seat/rostrum-seat-unset-down.svg')
     center center no-repeat;
     background-size: 100% 100%;
     line-height: 42px;
   }
   .rostrum-seat-selected{
-
+    border: white 5px solid;
     background: url('../../../../assets/image/web/seat/rostrum-seat-selected-down.svg')
     center center no-repeat;
     background-size: 100% 100%;
     line-height: 42px;
-
-  }
-  .rostrum-seat-span__selected {
-    color:#0DAF9C;
-  }
-  .rostrum-seat__common {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    span {
-      width: 100%;
-      height: 100%;
-      font-size: 12px;
-      text-align: center;
-    }
-  }
-  .rostrum-seat__input {
-    margin: 4px;
-    border-radius: 2px;
-    border: 1px solid #333e5e;
   }
  .divMainScreen{
       display: flex;
       flex-direction: row ;
-      font-size:0;
-      margin: 0; padding: 0; border: 0;
-      img{
-        display: block;
-      }
   }
 .divTransform90
   {
@@ -406,12 +293,12 @@ export default {
     -webkit-transform:rotate(90deg);  /*Safari和Chrome*/
     -o-transform:rotate(90deg);  /*Opera*/
     span{
-      transform:rotate(270deg);
-        -ms-transform:rotate(270deg); /*IE 9*/
-        -moz-transform:rotate(270deg);  /*Firefox*/
-        -webkit-transform:rotate(270deg);  /*Safari和Chrome*/
-        -o-transform:rotate(270deg);  /*Opera*/
-        }
+			    transform:rotate(-90deg);
+        -ms-transform:rotate(-90deg); /*IE 9*/
+        -moz-transform:rotate(-90deg);  /*Firefox*/
+        -webkit-transform:rotate(-90deg);  /*Safari和Chrome*/
+        -o-transform:rotate(-90deg);  /*Opera*/
+			}
   }
   .divTransform180
   {
@@ -421,11 +308,11 @@ export default {
     -webkit-transform:rotate(180deg);  /*Safari和Chrome*/
     -o-transform:rotate(180deg);  /*Opera*/
     span{
-     transform:rotate(180deg);
-    -ms-transform:rotate(180deg);  /* IE 9*/
-    -moz-transform:rotate(180deg);  /*Firefox*/
-    -webkit-transform:rotate(180deg);  /*Safari和Chrome*/
-    -o-transform:rotate(180deg);  /*Opera*/
+          transform:rotate(-180deg);
+    -ms-transform:rotate(-180deg);  /* IE 9*/
+    -moz-transform:rotate(-180deg);  /*Firefox*/
+    -webkit-transform:rotate(-180deg);  /*Safari和Chrome*/
+    -o-transform:rotate(-180deg);  /*Opera*/
     }
 
   }
@@ -437,11 +324,11 @@ export default {
     -webkit-transform:rotate(270deg); /* Safari和Chrome*/
     -o-transform:rotate(270deg); /*Opera*/
     span{
-    transform:rotate(90deg);
-    -ms-transform:rotate(90deg); /* IE 9*/
-    -moz-transform:rotate(90deg); /* Firefox*/
-    -webkit-transform:rotate(90deg); /* Safari和Chrome*/
-    -o-transform:rotate(90deg); /*Opera*/
+          transform:rotate(-270deg);
+    -ms-transform:rotate(-270deg); /* IE 9*/
+    -moz-transform:rotate(-270deg); /* Firefox*/
+    -webkit-transform:rotate(-270deg); /* Safari和Chrome*/
+    -o-transform:rotate(-270deg); /*Opera*/
     }
   }
 </style>
