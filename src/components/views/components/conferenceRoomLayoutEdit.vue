@@ -1,6 +1,7 @@
 <template>
 <div class="pr seatLayout" ref='seatLayoutRef'>
-    <div class="clearfix" style="padding-left: 20px">
+
+    <div class="clearfix" style="padding-left: 20px ;margin-bottom:20px">
     <el-form :rules="rules" ref='templateform' :model="seatTemplate">
         <el-form-item prop="name" style="margin-bottom: 0">
         <el-input v-if="nameEdit" class="vue-input"
@@ -8,7 +9,7 @@
           @blur="nameEdit = false"
           maxlength="20"
           size="medium"
-          placeholder="请输入模板名称"
+          placeholder="请输入布局名称"
           v-model.trim="seatTemplate.name">
         </el-input>
          <div v-else style="height: 36px;display: flex;align-items: center;">{{seatTemplate.name}}
@@ -17,14 +18,15 @@
         </el-form-item>
     </el-form>
         <hr style="border:0;height:2px;background: #F5F6FB;margin: 0" />
-      </div>
+     </div>
     <div class="btn-wrapper">
       <div class="left-wrapper">
-        <el-button type="primary"  @click="selModel">选择模型</el-button>
+        <el-button type="primary"  @click="selModel">添加模型</el-button>
         <el-button type="primary"  @click="addFacility">添加设施</el-button>
         <el-button class="addSeat"
         @click="addSeat" :type="!enableAddSeat?'primary' : ''">添加座位</el-button>
         <el-button class="clear-all" type="text" icon="el-icon-delete"
+        :disabled="seatTemplate.wallWidth===0"
         @click="clearAll">清空全部</el-button>
       </div>
       <div class='div-icon'>
@@ -33,7 +35,8 @@
         <div></div><span>主屏幕</span>
       </div>
     </div>
-    <div class="seat-wrapper" ref="seatWrapperRef">
+    <div ref='mainSeatAreaRef' class="mainSeatArea">
+     <div class="seat-wrapper" ref="seatWrapperRef">
         <div class="inner-seat-wrapper unselect "  @mousedown="mousedown" @mouseup="mouseup"
         @mousemove.stop='mousemove'
         ref="innerSeatWrapperRef" draggable="false">
@@ -42,11 +45,14 @@
           <div v-for="(row,rowIndex) in seatTemplate.layoutArray" :key="rowIndex"
           style="display: flex;">
             <div v-for="(item,colIndex) in row" :key="colIndex"
-              :class="[showBlock(item.type), seatStyle(item.type,item.orientation,
-             typeof(item.selected)==='undefined'||!item.selected?false:true)]"
-              :style="{width:gridSize+'px',height:gridSize+'px'}"
+         :class="['square-block',seatStyle(item.type,item.orientation,
+          typeof(item.selected)==='undefined'||!item.selected?false:true)]"
+            :style="{width:gridSize+'px',height:gridSize+'px'}" :row="rowIndex" :column="colIndex">
+              <div class ="block-area"
+              :style="{width:(gridSize+doubleBorder)+'px',height:(gridSize+doubleBorder)+'px',
+             top:rowIndex*(gridSize+doubleBorder)+'px',left:colIndex*(gridSize+doubleBorder)+'px'}"
               :row="rowIndex" :column="colIndex">
-                <!-- {{typeof(item.selected)==='undefined'||!item.selected?false:true}} -->
+              </div>
             </div>
           </div>
           <!--设施-->
@@ -60,6 +66,7 @@
                 :facilityOrientation="facility.facilityOrientation"
                 :facilityType="facility.facilityType"
                 :holdSeatNum="facility.holdSeatNum"
+                :rostrumHeight="facility.rostrumHeight"
                 :style="{
                   top:(gridSize+doubleBorder)*facility.topIndex
                   +diffLeftTop(facility.facilityOrientation,
@@ -70,6 +77,45 @@
                   :reqType="facility.selected?1:2">
             </facility>
           </div>
+          <!--弹出座位编辑框-->
+          <el-popover placement="bottom"
+                  width="314" trigger="manual"
+                  :title="editInfo.type"
+                  v-model="showMultiSeatsPop"
+                  >
+              <hr style="border:0;height:1px;background: #E4E8EE;" />
+                <eidtform
+                  :editInfo="editInfo"
+                  :width="290"
+                  :height="160"
+                  :seatOrientation.sync="seatOrientation"
+                  :seatType.sync="seatType"
+                  :refreshValue = "new Date().getTime()"
+                  @deleteItems="deleteItems"
+                  @okEdit="okEdit"
+                  @cancelEdit="cancelEdit"
+                  >
+                </eidtform>
+                <div  slot="reference" class='popDiv' ref='popDiv'></div>
+           </el-popover>
+          <!--设施弹出pop 框-->
+          <el-popover placement="bottom"
+           width="314" trigger="manual"
+           :title="editInfo.type"
+           v-model="showFacilityPop"
+           >
+             <hr style="border:0;height:1px;background: #E4E8EE;" />
+              <eidtform
+                :editInfo="editInfo"
+                :width="290"
+                :height="100"
+                 @deleteItems="deleteItems"
+                 @cancelEdit="cancelEdit"
+                 @okEdit="okEdit"
+                >
+              </eidtform>
+                <div slot="reference" class='popDiv' ref='popFacilityEditDiv'></div>
+           </el-popover>
            <!--围墙  -->
           <wall :borderWidth="10"  ref="wallRef"
                 :wallHeight="seatTemplate.wallHeight"
@@ -83,56 +129,7 @@
                 @addDoor="addDoor"
                 v-if='(!editState||facilityInfo.facilityType==="door")&&seatTemplate.wallWidth>0'>
           </wall>
-        <!--座位或设施编辑框-->
-         <div class='edit-form' v-if='showEditForm' :style="editDivStyle" >
-           <el-card class="box-card">
-            <div slot="header" class="clearfix">
-              <span>{{editInfo.type}}</span>
-            </div>
-            <div  class=" item">
-               <el-form label-position="left">
-                   <el-form-item label="座位类型" v-if="editInfo.type.indexOf('座位')!==-1"
-                   label-width="92px">
-                    <el-select v-model="seatType" placeholder="请选择座位类型">
-                      <el-option
-                        v-for="item in seatTypes"
-                        :key="item.value"
-                        :label="item.label"
-                        :value="item.value">
-                      </el-option>
-                    </el-select>
-                   </el-form-item>
-                   <el-form-item label="座位方向"
-                    v-if="editInfo.type.indexOf('座位')!==-1"
-                    label-width="92px">
-                    <el-select v-model="seatOrientation" placeholder="请选择">
-                      <el-option
-                        v-for="item in orientations"
-                        :key="item.value"
-                        :label="item.label"
-                        :value="item.value">
-                      </el-option>
-                    </el-select>
-                   </el-form-item>
-                   <el-form-item label="编辑设施"  v-if="editInfo.type.indexOf('座位')===-1"
-                    label-width="92px">
-                   <el-link type="primary" :underline="true"
-                    @click="okEdit">编辑{{editInfo.type}}</el-link>
-                   </el-form-item>
-                     <el-form-item>
-                       <div class="edit-btn-wrapper">
-                      <el-button  icon="el-icon-delete" @click="deleteItems"
-                      class='delete-btn'>删除</el-button>
-                      <el-button @click="cancelEdit"
-                      :type="editInfo.type.indexOf('座位')===-1?'primary':''">取消</el-button>
-                      <el-button type="primary" @click="okEdit"
-                      v-if="editInfo.type.indexOf('座位')!==-1">确定</el-button>
-                       </div>
-                    </el-form-item>
-               </el-form>
-            </div>
-          </el-card>
-         </div>
+
          <!--添加座位时的图片-->
           <div v-show="enableAddSeat" ref="addSeatDivRef" id='addSeatDivRef'
           :class="forbidden?'add-seat-unset':'add-seat'">
@@ -154,13 +151,14 @@
           </seats>
           <!--可移动设施时显示-->
           <facility :type="'设施'" ref="facilityRef"
-                :gridSize="parseInt(gridSize)"
-                :topIndex="parseInt(facilityInfo.topIndex)"
-                :leftIndex="parseInt(facilityInfo.leftIndex)"
-                :facilityWidth="parseInt(facilityInfo.facilityWidth)"
-                :facilityHeight="parseInt(facilityInfo.facilityHeight)"
+                :gridSize="gridSize"
+                :topIndex="facilityInfo.topIndex"
+                :leftIndex="facilityInfo.leftIndex"
+                :facilityWidth="facilityInfo.facilityWidth"
+                :facilityHeight="facilityInfo.facilityHeight"
                 :facilityType="facilityInfo.facilityType"
-                :holdSeatNum="parseInt(facilityInfo.holdSeatNum)"
+                :holdSeatNum="facilityInfo.holdSeatNum"
+                :rostrumHeight="facilityInfo.rostrumHeight"
                 :facilityOrientation="facilityInfo.facilityOrientation"
                 v-if="showDraggFacility" :reqType="forbidden?3:1">
           </facility>
@@ -169,8 +167,8 @@
 
        <!--弹出的对话框区域-->
         <el-dialog title="添加模型" :visible.sync="dialogModelSelectVisible"
-          :show-close="false" width="694px" custom-class='dialog-model'
-          :close-on-click-modal="false">
+           width="694px" custom-class='dialog-model'
+          :close-on-click-modal="false"  @close="clearValidates('seatModelFormRef')">
           <el-row :gutter="20">
             <el-col :span="6">
               <div class="grid-content"  @click="nextModel('uShape')">
@@ -181,7 +179,7 @@
             <el-col :span="6">
               <div class="grid-content" @click="nextModel('gyrationShape')">
                  <img src="../../../assets/image/web/seat/gyrationShape.svg"  />
-                 <span >环型排布</span>
+                 <span >回型排布</span>
               </div>
             </el-col>
             <el-col :span="6">
@@ -201,14 +199,15 @@
 
         <el-dialog title="编辑模型" :visible.sync="dialogModelInfoVisible"
         width="652px"  custom-class='dialog-model-detail'
-        :close-on-click-modal="false">
+        :close-on-click-modal="false" >
             <el-row>
                <el-col :span="16">
-                  <el-form  label-position="left"  >
-                    <el-form-item label="U开口方向" label-width="92px"
+                  <el-form  label-position="left" :rules="seatModelRules"
+                  ref='seatModelFormRef' :model="seatModelInfo">
+                    <el-form-item label="U开口方向" label-width="105px"
                    v-show="seatModelInfo.seatModelType==='uShape'" >
                         <el-select v-model="seatModelInfo.orientation"
-                        placeholder="请选择" style="width:300px">
+                        placeholder="请选择" style="width:275px">
                           <el-option
                             v-for="item in orientations"
                             :key="item.value"
@@ -219,18 +218,19 @@
                     </el-form-item>
                   <el-row>
                     <el-col :span="12">
-                        <el-form-item label-width="92px"
+                        <el-form-item label-width="105px" prop="horizontalSeatNum"
                         :label="seatModelInfo.seatModelType==='uShape'?'U底部座位':'横向座位数'">
-                          <el-input-number   v-model="seatModelInfo.horizontalSeatNum"
-                          controls-position="right" :min="1" :max="13"></el-input-number>
-                        </el-form-item>
+                          <el-input  v-model.number="seatModelInfo.horizontalSeatNum"
+                          class="param-input"
+                          ></el-input>
+                           </el-form-item>
                     </el-col>
                     <el-col :span="12">
-                        <el-form-item label-width="92px"
+                        <el-form-item label-width="105px" prop="verticalSeatNum"
                         :label="this.seatModelInfo.seatModelType==='uShape'?'U侧边座位':'纵向座位数'">
-                            <el-input-number v-model="seatModelInfo.verticalSeatNum"
-                              controls-position="right"
-                            :min="1" :max="15" label="纵向座位数"></el-input-number>
+                            <el-input v-model.number="seatModelInfo.verticalSeatNum"
+                             class="param-input">
+                            </el-input>
                         </el-form-item>
                     </el-col>
                  </el-row>
@@ -238,7 +238,8 @@
               </el-form>
               </el-col>
               <el-col :span="8">
-                  <div style="text-align:center;" class='div-preview'>
+                  <div style="text-align:center;"  :class="isIE()?'div-preview-ie':''"
+                  class="div-preview">
                       <seats  v-model="seatModelInfo"
                       :gridSize="8"
                       :circleNum="parseInt(seatModelInfo.circleNum)"
@@ -253,37 +254,40 @@
               </el-col>
             </el-row>
             <div slot="footer" class="dialog-footer">
-              <el-button @click="upModel">上一步</el-button>
-              <el-button type="primary" @click="okModel">确 定</el-button>
+              <el-button @click="upModel" type="primary" class="w80" plain>上一步</el-button>
+              <el-button type="primary" @click="okModel" class='w80'>确 定</el-button>
             </div>
         </el-dialog>
 
-        <el-dialog title="选择设施" :visible.sync="dialogFacilityVisible"
-          width="694px" :close-on-click-modal="false"
-          :show-close="false" custom-class='dialog-model'>
+        <el-dialog title="添加设施" :visible.sync="dialogFacilityVisible"
+          width="694px" :close-on-click-modal="false" @close="clearValidates('facilityFormRef')"
+          custom-class='dialog-model'>
           <el-row :gutter="20">
           <el-col :span="6">
-            <div class="grid-content"  @click="nextFacility('rostrum')">
-              <img id='rostrum' src="../../../assets/image/web/seat/rostrum.svg">
-              <span>主席台</span>
+            <div :class="containRostrum?'grid-content-disable':'grid-content'"
+            @click="nextFacility('rostrum')" >
+             <div id='rostrum'></div>
+              <span>主席台</span><br>
               <span class='tipsSpan'>仅可添加一个</span>
             </div>
           </el-col>
           <el-col :span="6">
-            <div class="grid-content"  @click="nextFacility('door')">
-               <img id='door' src="../../../assets/image/web/seat/door.svg" >
+            <div :class="seatTemplate.wallWidth===0?'grid-content-disable':'grid-content'"
+             @click="nextFacility('door')">
+             <div id='door'></div>
                 <span>入口</span>
-                 <span class='tipsSpan'>围墙变化后需重新放置</span>
+                <br>
+                <span class='tipsSpan'>围墙变化后需重新放置</span>
             </div>
          </el-col>
           <el-col :span="6">
           <div class="grid-content" @click="nextFacility('table')">
-            <img  id='table'  src="../../../assets/image/web/seat/table.svg"  >
+            <div id='table'></div>
              <span>会议桌</span>
           </div>
         </el-col>
           <el-col :span="6"><div class="grid-content" @click="nextFacility('mainScreen')">
-             <img id="mainScreen" src="../../../assets/image/web/seat/mainScreen.svg"  >
+             <div id='mainScreen'></div>
               <span>主屏幕</span>
            </div>
           </el-col>
@@ -291,17 +295,18 @@
         </el-row>
         </el-dialog>
 
-        <el-dialog title="添加设施" :visible.sync="dialogFacilityDetailVisible"
-        :close-on-click-modal="false" :modal="false"
+        <el-dialog :title="editInfo.id===''?'添加设施':'编辑设施'"
+        :visible.sync="dialogFacilityDetailVisible"  @close='cancelSelected'
+        :close-on-click-modal="false"
          width="652px"  custom-class='dialog-model-detail'>
            <el-row>
             <el-col :span="16">
             <el-form  label-position="left" :rules="facilityRules"
              ref='facilityFormRef' :model="facilityInfo">
               <el-form-item label="设施朝向" v-show="facilityInfo.facilityType!=='table'"
-              label-width="92px">
+              label-width="105px">
                 <el-select v-model="facilityInfo.facilityOrientation"
-                    placeholder="请选择" style="width:300px">
+                    placeholder="请选择" style="width:275px">
                   <el-option
                     v-for="item in orientations"
                     :key="item.value"
@@ -312,63 +317,68 @@
               </el-form-item>
               <el-row>
                 <el-col :span="12">
-              <el-form-item label="设施长度" label-width="92px"
-                v-if="facilityInfo.facilityType!=='door'" >
-                  <el-input-number v-model="facilityInfo.facilityWidth"
-                  :min="facilityInfo.facilityType==='mainScreen'?3:1"
-                  :max="facilityInfo.facilityType==='mainScreen'?10:12" label="设施长度"
-                  controls-position="right"></el-input-number>
+              <el-form-item label="设施长度" label-width="105px"
+                v-if="facilityInfo.facilityType!=='door'" prop="facilityWidth">
+                    <el-input   v-model.number="facilityInfo.facilityWidth"
+                     @input="checkHoldSeats" class="param-input">
+
+                    </el-input>
               </el-form-item>
                 </el-col>
                 <el-col :span="12">
-                       <!--如果是主席台（设置单独主席台高度）-->
-                  <el-form-item label="设施高度" label-width="92px"
-                  v-if="facilityInfo.facilityType==='rostrum'" >
-                  <el-input-number v-model="rostrumHeight"
-                  :min="1" :max="8"  controls-position="right"></el-input-number>
+                  <!--如果是主席台（设置单独主席台高度）-->
+                  <el-form-item label="设施宽度" label-width="105px"
+                  v-if="facilityInfo.facilityType==='rostrum'"  prop="rostrumHeight" >
+                           <el-input   v-model.number="facilityInfo.rostrumHeight"
+                          class="param-input" ></el-input>
                 </el-form-item>
                 <!--如果是会议桌-->
-                  <el-form-item label="设施高度" label-width="92px"
-                  v-if="facilityInfo.facilityType==='table'">
-                  <el-input-number v-model="facilityInfo.facilityHeight"
-                  :min="1" :max="8"  controls-position="right"></el-input-number>
+                  <el-form-item label="设施宽度" label-width="105px"
+                  v-if="facilityInfo.facilityType==='table'"  prop="facilityHeight">
+                  <el-input  v-model.number="facilityInfo.facilityHeight"
+                  class="param-input"></el-input>
                 </el-form-item>
                 </el-col>
               </el-row>
-            <el-form-item label="座位数量" label-width="92px"
-               v-if="facilityInfo.facilityType==='rostrum'"   prop="holdSeatNum">
-              <el-input-number v-model="facilityInfo.holdSeatNum"
-              :min="0" :max="12"  controls-position="right"></el-input-number>
+            <el-form-item label="座位数量" label-width="105px"
+               v-if="facilityInfo.facilityType==='rostrum'"   prop="holdSeatNum" >
+                     <el-input   v-model.number="facilityInfo.holdSeatNum"
+                    class="param-input"></el-input>
             </el-form-item>
           </el-form>
         </el-col>
           <el-col :span="8">
-            <div  class='div-preview'>
-              <facility
-                :gridSize="parseInt(16)"
+            <div  :class="isIE()?'div-preview-ie':''"
+            class="div-preview" style="text-align:center;" >
+              <facility class="child-pre"
+                :gridSize="parseInt(14)"
                 :facilityWidth="parseInt(facilityInfo.facilityWidth)"
                 :facilityHeight="parseInt(facilityInfo.facilityHeight)"
                 :facilityType="facilityInfo.facilityType"
                 :holdSeatNum="parseInt(facilityInfo.holdSeatNum)"
                 :facilityOrientation="facilityInfo.facilityOrientation"
+                :rostrumHeight="facilityInfo.rostrumHeight"
                 :reqType="2"
-                :doubleBorder="3"
+                :doubleBorder="2"
                 :isPreview="true">
               </facility>
             </div>
           </el-col>
-      </el-row>
+          </el-row>
 
         <div slot="footer" class="dialog-footer">
-          <el-button @click="upFacility" v-if="editInfo.id===''">上一步</el-button>
-          <el-button type="primary" @click="okFacility">确 定</el-button>
+          <el-button @click="upFacility" v-if="editInfo.id===''"
+          type="primary" class="w80" plain>上一步</el-button>
+          <el-button type="primary" @click="okFacility" class='w80'>确 定</el-button>
         </div>
         </el-dialog>
+
        <!--编辑座位时候的遮罩层-->
       <div class="mask" @click="endEditState" v-if="editState"></div>
       <div class="tc mb0_item pb34 pt50" style="background: #F5F6FB;margin-bottom:0;">
       <el-button type="primary" class="w100" plain @click="cancel">取消</el-button>
       <el-button type="primary" class="w100" @click="saveAndQuit">保存并退出</el-button>
+    </div>
     </div>
   </div>
 </template>
@@ -377,12 +387,14 @@ import $ from 'jquery';
 import wall from './component/wall.vue';
 import seats from './component/seats.vue';
 import facility from './component/facility.vue';
+import eidtform from './component/eidtform.vue';
 
 export default {
   components: {
     wall,
     seats,
     facility,
+    eidtform,
   },
   // 监听属性
   watch: {
@@ -392,7 +404,11 @@ export default {
         this.computeWall();
       }
     },
-    rostrumHeight(val) {
+    // eslint-disable-next-line func-names
+    'facilityInfo.rostrumHeight': function (val) {
+      if (this.facilityInfo.facilityType !== 'rostrum') {
+        return;
+      }
       if (this.facilityInfo.holdSeatNum > 0) {
         this.facilityInfo.facilityHeight = val + 1;
       } else {
@@ -401,12 +417,22 @@ export default {
     },
     // eslint-disable-next-line func-names
     'facilityInfo.holdSeatNum': function (val) {
+      if (this.facilityInfo.facilityType !== 'rostrum') {
+        return;
+      }
       if (val > 0) {
-        this.facilityInfo.facilityHeight = this.rostrumHeight + 1;
+        this.facilityInfo.facilityHeight = this.facilityInfo.rostrumHeight + 1;
       } else {
-        this.facilityInfo.facilityHeight = this.rostrumHeight;
+        this.facilityInfo.facilityHeight = this.facilityInfo.rostrumHeight;
       }
     },
+    // 座位数小于等于主席台长度
+    // 'facilityInfo.facilityWidth': function (val) {
+    //   if (val < this.facilityInfo.holdSeatNum) {
+    //     this.facilityInfo.holdSeatNum = val;
+    //   }
+    // },
+
   },
   // 计算属性 围墙的位置
   computed: {
@@ -473,7 +499,9 @@ export default {
     // 是否编辑状态
     editState() {
       if (this.enableAddSeat || this.showDraggModel
-      || this.showDraggFacility || this.showEditForm || this.dialogFacilityDetailVisible) {
+      || this.showFacilityPop || this.showMultiSeatsPop
+      || this.showDraggFacility || this.showEditForm
+      || this.dialogFacilityDetailVisible) {
         return true;
       }
       return false;
@@ -485,16 +513,6 @@ export default {
           return (width - height) / 2 * unit;
         }
         return 0;
-      };
-    },
-
-    // 是否显示画布格子
-    showBlock() {
-      return (type) => {
-        if (type !== 0) {
-          return 'square-noneblock';
-        }
-        return 'square-block';
       };
     },
 
@@ -530,7 +548,6 @@ export default {
         } else return '';
       };
     },
-
     /** 校验 */
     // 主席台只能添加一个
     containRostrum() {
@@ -542,28 +559,41 @@ export default {
       });
       return isContain;
     },
+    showMultiSeatsPop: {
+      get() {
+        return this.showEditForm && this.editInfo.type.indexOf('座位') !== -1;
+      },
+      set() { this.val = false; },
+    },
 
-    // 主席台座位和主席台长度校验
-    // rostrumRules() {
-
-    // },
+    showFacilityPop: {
+      get() {
+        return this.showEditForm && this.editInfo.type.indexOf('座位') === -1;
+      },
+      set() { this.val = false; },
+    },
   },
 
   data() {
-    // 校验模板名
+    // 校验布局名
     const validateName = (rule, value, callback) => {
+      const blankStr = new RegExp(/\s+/g);
       if (value === '') {
-        callback(new Error('请输入模板名称'));
+        callback(new Error('请输入布局名称'));
+      } else if (blankStr.test(value)) {
+        callback(new Error('布局名称不能包含空格'));
       } else if (this.seatTemplateNameArr
       && this.seatTemplateNameArr.indexOf(value) !== -1) {
-        callback(new Error('模板名称不能重复'));
+        callback(new Error('布局名称不能重复'));
       } else {
         callback();
       }
     };
     const validateHoldRostrum = (rule, value, callback) => {
-      if (this.facilityInfo.facilityType === 'rostrum' && this.facilityInfo.facilityWidth < value) {
-        callback(new Error('主席台座位数量不能大于主席台长度!'));
+      if (!/^(0|[1-9][0-9]*)$/.test(value) || value > 12 || value < 0) {
+        callback(new Error('请输入0-12的整数'));
+      } else if (this.facilityInfo.facilityType === 'rostrum' && this.facilityInfo.facilityWidth < value) {
+        callback(new Error('座位数量须大于等于0，小于等于长度!'));
       } else if (this.facilityInfo.facilityType === 'rostrum' && value > 0
        && (this.facilityInfo.facilityWidth + value) % 2 !== 0) {
         callback(new Error('座位数量须与主席台长度奇偶一致!'));
@@ -571,9 +601,63 @@ export default {
         callback();
       }
     };
+    // 校验设施的高度（会议桌）
+    const validateFacilityHeight = (rule, value, callback) => {
+      if (this.facilityInfo.facilityType === 'table' && (!/^\d+$/.test(value) || value > 12 || value < 1)) {
+        callback(new Error('请输入1-12的整数'));
+      } else {
+        callback();
+      }
+    };
+    // 校验主席台高度
+    const validateRostrumHeight = (rule, value, callback) => {
+      // 主席台高度(1-8)
+      if (this.facilityInfo.facilityType === 'rostrum' && (!/^\d+$/.test(value) || value > 8 || value < 1)) {
+        callback(new Error('请输入1-8的整数'));
+      } else {
+        callback();
+      }
+    };
+    // 校验设施长度
+    const validateFacilityWidth = (rule, value, callback) => {
+      // 主屏幕长度(3-10)
+      if (this.facilityInfo.facilityType === 'mainScreen' && (!/^\d+$/.test(value) || value > 10 || value < 3)) {
+        callback(new Error('请输入3-10的整数'));
+        // 主席台和会议桌 (1-12)
+      } else if (!/^\d+$/.test(value) || value > 12 || value < 1) {
+        callback(new Error('请输入1-12的整数'));
+      } else {
+        callback();
+      }
+    };
+    // 校验模型横向座位数
+    const validateHorizontalSeatNum = (rule, value, callback) => {
+      if (this.seatModelInfo.seatModelType === 'uShape' && (!/^\d+$/.test(value) || value > 13 || value < 1)) {
+        callback(new Error('请输入1-13的整数'));
+      } else if (this.seatModelInfo.seatModelType === 'gyrationShape' && (!/^\d+$/.test(value) || value > 14 || value < 1)) {
+        callback(new Error('请输入1-14的整数'));
+      } else if (this.seatModelInfo.seatModelType === 'deskShape' && (!/^\d+$/.test(value) || value > 16 || value < 1)) {
+        callback(new Error('请输入1-16的整数'));
+      } else {
+        callback();
+      }
+    };
+    // 校验模型纵向座位数
+    const validateVerticalSeatNum = (rule, value, callback) => {
+      if (this.seatModelInfo.seatModelType === 'uShape' && (!/^\d+$/.test(value) || value > 15 || value < 1)) {
+        callback(new Error('请输入1-15的整数'));
+      } else if (this.seatModelInfo.seatModelType === 'gyrationShape' && (!/^\d+$/.test(value) || value > 10 || value < 1)) {
+        callback(new Error('请输入1-10的整数'));
+      } else if (this.seatModelInfo.seatModelType === 'deskShape' && (!/^\d+$/.test(value) || value > 12 || value < 1)) {
+        callback(new Error('请输入1-12的整数'));
+      } else {
+        callback();
+      }
+    };
 
     return {
       nameEdit: false,
+      // 框选
       reactArea: {
         startX: 0,
         startY: 0,
@@ -633,10 +717,11 @@ export default {
         facilityHeight: 0, // 设施纵向占多少格
         facilityType: '', // 设施类型 'table'桌子,'rostrum' 主席台,'mainScreen' 主屏幕,'door' 入口
         holdSeatNum: 0, // 设施容纳的座位数量
+        rostrumHeight: 1, // 主席台高度
         facilityOrientation: 'u', // 设施朝（上下左右 依次 u d l r）默认朝上
       },
-      rostrumHeight: 1, // 主席台高度
-      // 座位模板信息
+
+      // 座位布局信息
       seatTemplate: {
         /*
           {
@@ -647,10 +732,11 @@ export default {
             label：编号
           }
         */
+        updateTime: '', // 按时间排序
         layoutArray: [], // 布局的二维数组
         facilities: [], // 设施信息
-        name: '', // 模板名称
-        id: '', // 模板id
+        name: '', // 布局名称
+        id: '', // 布局id
         wallWidth: 0, // 围墙的长
         wallHeight: 0, // 围墙的高
         wallLeft: 0, // 围墙Left位置
@@ -678,27 +764,58 @@ export default {
       }],
       // 座位方向 编辑座位时候用
       seatOrientation: 'u',
-      // 已有的模板名称
+      // 已有的布局名称
       seatTemplateNameArr: [],
       rules: {
         name: [
-          { required: true, validator: validateName, trigger: 'blur' },
+          { required: false, validator: validateName, trigger: 'change' },
         ],
       },
       facilityRules: {
-        // facilityWidth: [
-        //   { required: true, validator: validateRostrumWidth, trigger: 'blur' },
-        // ],
+        facilityWidth: [
+          { required: false, validator: validateFacilityWidth, trigger: 'change' },
+          // { type: 'number',  message:'请输入整数',trigger: 'change' },
+        ],
+        facilityHeight: [
+          { required: false, validator: validateFacilityHeight, trigger: 'change' },
+          //  { type: 'number',  message:'请输入1-12的整数',trigger: 'change' },
+        ],
+        rostrumHeight: [
+          { required: false, validator: validateRostrumHeight, trigger: 'change' },
+          //  { type: 'number',  message:'请输入1-8的整数',trigger: 'change' },
+
+        ],
         holdSeatNum: [
-          { required: true, validator: validateHoldRostrum, trigger: 'blur' },
+          { required: false, validator: validateHoldRostrum, trigger: 'change' },
+          //  { type: 'number',  message:'请输入0-12的整数',trigger: 'change' },
+        ],
+      },
+      seatModelRules: {
+        verticalSeatNum: [
+          { required: false, validator: validateVerticalSeatNum, trigger: 'change' },
+          //  { type: 'number',  message:'请输入整数',trigger: 'change' },
+        ],
+        horizontalSeatNum: [
+          { required: false, validator: validateHorizontalSeatNum, trigger: 'change' },
+          //  { type: 'number',  message:'请输入整数',trigger: 'change' },
         ],
       },
     };
   },
 
   methods: {
+
+    // 判断是否IE（ie11）
+    isIE() {
+      if (!!window.ActiveXObject || 'ActiveXObject' in window) {
+        return true;
+      }
+      return false;
+    },
+
     // 计算围墙
     computeWall() {
+      this.isIE();
       // 围墙的上下左右
       let top = 0;
       let bottom = 0;
@@ -785,6 +902,17 @@ export default {
         }
       }
     },
+    // 关联校验（主席台座位数小于主席台长度）
+    checkHoldSeats() {
+      if (this.facilityInfo.facilityType === 'rostrum') {
+        this.$refs.facilityFormRef.validateField('holdSeatNum');
+      }
+    },
+    // 打开模型选择
+    selModel() {
+      this.dialogModelSelectVisible = true;
+    },
+
     // 模型选择
     nextModel(type) {
       // 选择模型 的对话框关闭
@@ -794,6 +922,12 @@ export default {
       if (type !== 'customize') {
         this.dialogModelInfoVisible = true;
       }
+      // 回型 不设置方向
+      if (type === 'gyrationShape') {
+        this.seatModelInfo.orientation = '';
+      } else {
+        this.seatModelInfo.orientation = 'u';
+      }
     },
     // 返回模型选择
     upModel() {
@@ -801,55 +935,42 @@ export default {
       this.dialogModelSelectVisible = true;
     },
     // 确定模型
-    okModel() {
-      // 关闭对话框
-      this.showDraggModel = true;
-      this.dialogModelInfoVisible = false;
-      // 添加模型时 禁用 设施的鼠标事件（确定位置后开启）
-      this.enableEvent = false;
-    },
-
-    // 返回设施选择
-    upFacility() {
-      this.dialogFacilityVisible = true;
-      this.dialogFacilityDetailVisible = false;
-    },
-    // 确定添加设施
-    okFacility() {
-      // new 一个设施
-      if (this.editInfo.id !== '') {
-        this.removeFacilities();
-        for (let i = 0; i < this.seatTemplate.facilities.length; i += 1) {
-          if (this.seatTemplate.facilities[i].id === this.editInfo.id) {
-            this.facilityInfo = this.seatTemplate.facilities[i];
-            this.editInfo.id = '';
-            break;
-          }
-        }
-      }
-
+    okModel(e) {
       // 关闭设施设置对话框
-      this.$refs.facilityFormRef.validate((valid) => {
+      this.$refs.seatModelFormRef.validate((valid) => {
         if (valid) {
-          this.dialogFacilityDetailVisible = false;
-          this.showDraggFacility = true;
-          this.enableEvent = false;// 添加设施时禁用已有设施的点击编辑事件
+        // 关闭对话框
+          this.showDraggModel = true;
+          this.dialogModelInfoVisible = false;
+          // 添加模型时 禁用 设施的鼠标事件（确定位置后开启）
+          this.enableEvent = false;
+          // 初始化位置
+          this.$nextTick(() => {
+            const newWidth = this.seatModelArrayWidth * (this.gridSize + this.doubleBorder);
+            const newHeight = this.seatModelArrayHeight * (this.gridSize + this.doubleBorder);
+            const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2) - $('.menu-expanded').width() - 32;
+            const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2)
+          - $('.warp-breadcrum').height() - 32 + this.$refs.mainSeatAreaRef.scrollTop;
+            this.modifyStyle(this.$refs.seatsRef.$el.style, `${newWidth}px`, `${newHeight}px`, `${top}px`, `${left}px`);
+          });
         }
       });
     },
+    // 添加设施
+    addFacility() {
+      this.dialogFacilityVisible = true;
+      this.dialogFacilityDetailVisible = false;
+    },
+
     // 设施选择
     nextFacility(type) {
       if (type === 'rostrum' && this.containRostrum) {
-        this.$message.warning({
-          message: '主席台只能添加一个，请进行编辑或删除后再次添加～',
-          center: true,
-          duration: 5000,
-          showClose: true,
-          customClass: 'cusPosit warnNotice',
-        });
         return;
       }
-
+      if (type === 'door' && this.seatTemplate.wallWidth === 0) {
+        return;
+      }
+      this.editInfo.id = '';
       // 选择设施 的对话框关闭
       this.dialogFacilityVisible = false;
       // this.seatModelInfo.seatModelType = type
@@ -858,43 +979,76 @@ export default {
       if (type === 'door') {
         this.facilityInfo.facilityWidth = 2;
         this.facilityInfo.facilityHeight = 1;
+        this.facilityInfo.holdSeatNum = 0;
         this.facilityInfo.facilityOrientation = 'u';
       } else if (type === 'mainScreen') {
         this.facilityInfo.facilityHeight = 1;
         this.facilityInfo.facilityWidth = 3;
+        this.facilityInfo.holdSeatNum = 0;
         this.facilityInfo.facilityOrientation = 'u';
       } else if (type === 'rostrum') {
         this.facilityInfo.facilityWidth = 3;
         this.facilityInfo.facilityHeight = 2;
         this.facilityInfo.holdSeatNum = 1;
-        this.rostrumHeight = 1;
+        this.facilityInfo.rostrumHeight = 1;
         this.facilityInfo.facilityOrientation = 'u';
       } else if (type === 'table') {
         // 会议桌不用设置方向
+        this.facilityInfo.holdSeatNum = 0;
         this.facilityInfo.facilityOrientation = '';
+        this.facilityInfo.facilityWidth = 4;
+        this.facilityInfo.facilityHeight = 4;
       }
       // 弹出 设施参数设置对话框
       this.dialogFacilityDetailVisible = true;
     },
 
-    // 打开模型选择
-    selModel() {
-      this.dialogModelSelectVisible = true;
-    },
-    // 添加设施
-    addFacility() {
+    // 返回设施选择
+    upFacility() {
       this.dialogFacilityVisible = true;
       this.dialogFacilityDetailVisible = false;
     },
+    // 确定添加设施
+    okFacility(e) {
+      // 关闭设施设置对话框
+      this.$refs.facilityFormRef.validate((valid) => {
+        if (valid) {
+          // new 一个设施
+          if (this.editInfo.id !== '') {
+            this.removeFacilities();
+            for (let i = 0; i < this.seatTemplate.facilities.length; i += 1) {
+              if (this.seatTemplate.facilities[i].id === this.editInfo.id) {
+                this.facilityInfo = this.seatTemplate.facilities[i];
+                this.editInfo.id = '';
+                break;
+              }
+            }
+          }
+          this.dialogFacilityDetailVisible = false;
+          this.showDraggFacility = true;
+          this.enableEvent = false;// 添加设施时禁用已有设施的点击编辑事件
+          // 初始化位置
+          this.$nextTick(() => {
+            const newWidth = this.facilityInfo.facilityWidth * (this.gridSize + this.doubleBorder);
+            const newHeight = this.facilityInfo.facilityHeight
+                              * (this.gridSize + this.doubleBorder);
+            const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2) - $('.menu-expanded').width() - 32;
+            const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2)
+        - $('.warp-breadcrum').height() - 32 + this.$refs.mainSeatAreaRef.scrollTop;
+            this.modifyStyle(this.$refs.facilityRef.$el.style, '', '', `${top}px`, `${left}px`);
+          });
+        }
+      });
+    },
     // 添加单个座位
     addSeat() {
-      this.cancelEdit();// 取消所有正在编辑的selected 状态
-      this.$message.warning({
+      this.cancelSelected();// 取消所有正在编辑的selected 状态
+      this.$message({
         message: '点击画布外，取消添加座位',
         center: true,
         duration: 10000,
         showClose: true,
-        customClass: 'cusPosit warnNotice',
+        customClass: 'custom-msg',
       });
 
       this.enableEvent = false;
@@ -915,16 +1069,13 @@ export default {
       });
       this.enableAddSeat = false;
     },
-    // 重置设施属性
-    resetFacility() {
-      this.facilityInfo.topIndex = 0;
-      this.facilityInfo.leftIndex = 0;
-      this.facilityInfo.facilityWidth = 0;
-      this.facilityInfo.facilityHeight = 0;
-      this.facilityInfo.facilityType = '';
-      this.facilityInfo.holdSeatNum = 0;
-      this.facilityInfo.facilityOrientation = 'u';
+    // 清空校验
+    clearValidates(formName) {
+      if (this.$refs[formName]) {
+        this.$refs[formName].clearValidate();
+      }
     },
+
     // 重置座位
     resetSeat() {
       // 将所有座位的值变为0
@@ -943,35 +1094,44 @@ export default {
     // 点击编辑设施
     editFacility(fac) {
       // 在指定位置 显示出编辑框
-      this.cancelEdit();// 先取消所有的编辑select 状态
+      this.cancelSelected();// 先取消所有的编辑select 状态
       fac.selected = true;
-      let left = (fac.leftIndex + fac.facilityWidth) * (this.gridSize + this.doubleBorder);
-      let top = (fac.topIndex + fac.facilityHeight) * (this.gridSize + this.doubleBorder);
 
-      if ((fac.leftIndex + fac.facilityWidth) > 15) {
-        left -= 356;
-      }
-      if ((fac.topIndex + fac.facilityHeight) > 15) {
-        top -= 300;
-      }
+      const top = (this.gridSize + this.doubleBorder) * fac.topIndex
+      + this.diffLeftTop(fac.facilityOrientation,
+        fac.facilityWidth, fac.facilityHeight, this.gridSize + this.doubleBorder);
+      const left = (this.gridSize + this.doubleBorder) * fac.leftIndex
+                  - this.diffLeftTop(fac.facilityOrientation,
+                    fac.facilityWidth, fac.facilityHeight, this.gridSize + this.doubleBorder);
+      const width = fac.facilityWidth * (this.gridSize + this.doubleBorder);
+      const height = fac.facilityHeight * (this.gridSize + this.doubleBorder);
 
-      const style = `left: ${left}px;top: ${top}px;width:314px;height:226px`;
-
-      if (fac.facilityType === 'door') {
-        this.editInfo.type = '入口';
-      } else if (fac.facilityType === 'mainScreen') {
-        this.editInfo.type = '主屏幕';
-      } else if (fac.facilityType === 'rostrum') {
-        this.editInfo.type = '主席台';
-      } else if (fac.facilityType === 'table') {
-        this.editInfo.type = '会议桌';
-      } else {
-        this.editInfo.type = '';
-      }
-      this.facilityInfo = JSON.parse(JSON.stringify(fac));
-      this.editInfo.id = fac.id;
-      this.editDivStyle = style;
-      this.showEditForm = true;
+      // 刷新pop弹出的编辑框位置
+      this.showEditForm = false;
+      this.$nextTick(() => {
+        this.modifyStyle(this.$refs.popFacilityEditDiv.style, `${width}px`, `${height}px`, `${top}px`, `${left}px`);
+        if (fac.facilityOrientation === 'l' || fac.facilityOrientation === 'r') {
+          this.$refs.popFacilityEditDiv.style.webkitTransform = 'rotate(90deg)';
+          this.$refs.popFacilityEditDiv.style.mozTransform = 'rotate(90deg)';
+          this.$refs.popFacilityEditDiv.style.msTransform = 'rotate(90deg)';
+          this.$refs.popFacilityEditDiv.style.oTransform = 'rotate(90deg)';
+          this.$refs.popFacilityEditDiv.style.transform = 'rotate(90deg)';
+        }
+        if (fac.facilityType === 'door') {
+          this.editInfo.type = '入口';
+        } else if (fac.facilityType === 'mainScreen') {
+          this.editInfo.type = '主屏幕';
+        } else if (fac.facilityType === 'rostrum') {
+          this.editInfo.type = '主席台';
+        } else if (fac.facilityType === 'table') {
+          this.editInfo.type = '会议桌';
+        } else {
+          this.editInfo.type = '';
+        }
+        this.facilityInfo = JSON.parse(JSON.stringify(fac));
+        this.editInfo.id = fac.id;
+        this.showEditForm = true;
+      });
     },
     // 删除选中的设施或座位
     deleteItems() {
@@ -981,29 +1141,31 @@ export default {
           type: 0, id: '', label: '', orientation: '',
         };
       } else if (this.editInfo.type === '多个座位') { // 删除多个座位
-        this.modifySeats('delete');
+        this.modifySeats('', '', 'delete');
       } else {
         this.removeFacilities();
       }
+      this.isMouseDown = false;
       this.showEditForm = false;
     },
     // 编辑座位或者设施 时的确定按钮或编辑设施事件
-    okEdit() {
+    okEdit(seatOrientation, seatType) {
       if (this.editInfo.type === '座位') {
         this.seatTemplate.layoutArray[this.editInfo.top][this.editInfo.left] = {
-          type: this.seatType, id: '', label: '', orientation: this.seatOrientation,
+          type: seatType, id: '', label: '', orientation: seatOrientation,
         };
       } else if (this.editInfo.type === '多个座位') {
-        this.modifySeats();
+        this.modifySeats(seatType, seatOrientation);
         this.removeSelectClass();
       } else {
         this.dialogFacilityDetailVisible = true;
       }
+      this.isMouseDown = false;
       this.showEditForm = false;
     },
 
-    // 取消编辑状态
-    cancelEdit() {
+    // 取消编辑选中的状态
+    cancelSelected() {
       if (this.editInfo.type === '座位') { // 单个座位
         delete this.seatTemplate.layoutArray[this.editInfo.top][this.editInfo.left].selected;
       } else if (this.editInfo.type === '多个座位') { // 多个座位
@@ -1017,8 +1179,12 @@ export default {
           }
         }
       }
-
+    },
+    // 取消编辑
+    cancelEdit() {
+      this.cancelSelected();
       this.showEditForm = false;
+      this.isMouseDown = false;
     },
     // 移除框选状态的样式
     removeSelectClass() {
@@ -1064,22 +1230,31 @@ export default {
       this.editInfo.id = '';
     },
     // 编辑多个座位
-    modifySeats(operation = 'update') {
+    modifySeats(seatType, seatOrientation, operation = 'update') {
       const { length } = document.getElementsByClassName('active-seat');
       if (length > 0) {
         for (let i = 0; i < length; i += 1) {
           const row = document.getElementsByClassName('active-seat')[i].attributes.row.nodeValue;
           const column = document.getElementsByClassName('active-seat')[i].attributes.column.nodeValue;
-          this.seatTemplate.layoutArray[row][column] = {
-            type: operation === 'update' ? this.seatType : 0, id: '', label: '', orientation: operation === 'update' ? this.seatOrientation : '',
-          };
+          if (operation === 'delete') {
+            this.seatTemplate.layoutArray[row][column] = {
+              type: 0, id: '', label: '', orientation: '',
+            };
+          } else {
+            if (seatType !== '') {
+              this.seatTemplate.layoutArray[row][column].type = seatType;
+            }
+            if (seatOrientation !== '') {
+              this.seatTemplate.layoutArray[row][column].orientation = seatOrientation;
+            }
+          }
         }
       }
     },
 
     // 结束编辑状态
     endEditState() {
-      this.cancelEdit();// 取消所有正在编辑的selected 状态
+      this.cancelSelected();// 取消所有正在编辑的selected 状态
       this.enableAddSeat = false;
       this.showDraggModel = false;
       this.showDraggFacility = false;
@@ -1102,6 +1277,16 @@ export default {
     },
     // 保存并退出
     saveAndQuit() {
+      // 如果布局为空不能保存
+      if (this.seatTemplate.wallWidth === 0) {
+        this.$message({
+          message: '没有内容，请修改后保存',
+          center: true,
+          duration: 3000,
+          customClass: 'custom-msg',
+        });
+        return;
+      }
       this.$refs.templateform.validate((valid) => {
         if (valid) {
           let no = 1;
@@ -1115,6 +1300,7 @@ export default {
               }
             }
           }
+          this.seatTemplate.updateTime = new Date().getTime();
           localStorage.setItem('seatTemplate', JSON.stringify(this.seatTemplate));
           this.$router.go(-1);
         }
@@ -1134,14 +1320,20 @@ export default {
           && (this.facilityInfo.facilityOrientation === 'r'
           || this.facilityInfo.facilityOrientation === 'l')) {
         // step 1 校验位置是否可放
-        this.seatTemplate.doorArea.forEach((item) => {
-          // 门的位置已经有门，或者门的位置添加超出了围墙边角
-          if (rowIndex === item.top || rowIndex - 1 === item.top
-          || rowIndex < 0 || rowIndex + 1 > this.seatTemplate.wallHeight) {
-            this.forbidden = true;
-            // console.log('越界');
-          }
-        });
+        // 如果门的位置在围墙边角 不可放置
+        if (rowIndex < 0 || rowIndex + 2 >= this.seatTemplate.wallHeight) {
+          this.forbidden = true;
+        } else {
+          // 已经有门的位置不可放置
+          this.seatTemplate.doorArea.forEach((item) => {
+            // 门的位置已经有门，
+            if ((rowIndex === item.top && leftIndex === item.left)
+              || (rowIndex + 1 === item.top && leftIndex === item.left)) {
+              this.forbidden = true;
+              // console.log('越界');
+            }
+          });
+        }
         if (this.forbidden) {
           return;
         }
@@ -1153,6 +1345,7 @@ export default {
           id: facilityId,
           topIndex,
           leftIndex,
+          rostrumHeight: this.facilityInfo.rostrumHeight,
           facilityWidth: this.facilityInfo.facilityWidth,
           facilityHeight: this.facilityInfo.facilityHeight,
           facilityType: this.facilityInfo.facilityType,
@@ -1167,13 +1360,19 @@ export default {
           && (this.facilityInfo.facilityOrientation === 'u' || this.facilityInfo.facilityOrientation === 'd')) {
         // step 1 校验位置是否可放
         // 门的位置已经有门，或者门的位置添加超出了围墙边角则不能放置
-        this.seatTemplate.doorArea.forEach((item) => {
-          if (colIndex === item.left || colIndex + 1 === item.left
-          || colIndex < 0 || colIndex + 1 > this.seatTemplate.wallWidth) {
-            this.forbidden = true;
-            // console.log('越界');
-          }
-        });
+
+        if (colIndex < 0 || colIndex + 2 >= this.seatTemplate.wallWidth) {
+          this.forbidden = true;
+        } else {
+          this.seatTemplate.doorArea.forEach((item) => {
+            if ((colIndex === item.left && rowIndex === item.top)
+             || (colIndex + 1 === item.left && rowIndex === item.top)) {
+              this.forbidden = true;
+              // console.log('越界');
+            }
+          });
+        }
+
         if (this.forbidden) {
           return;
         }
@@ -1185,6 +1384,7 @@ export default {
           id: facilityId,
           topIndex,
           leftIndex,
+          rostrumHeight: this.facilityInfo.rostrumHeight,
           facilityWidth: this.facilityInfo.facilityWidth,
           facilityHeight: this.facilityInfo.facilityHeight,
           facilityType: this.facilityInfo.facilityType,
@@ -1200,26 +1400,29 @@ export default {
     initSeatModelArray(arr) {
       this.seatModelArray = arr;
     },
+
     // 鼠标事件
     // 鼠标移动事件
     mousemove(e) {
       // 座位模型
       if (this.$refs.seatsRef) {
-        const newWith = this.seatModelArrayWidth * (this.gridSize + this.doubleBorder);
+        const newWidth = this.seatModelArrayWidth * (this.gridSize + this.doubleBorder);
         const newHeight = this.seatModelArrayHeight * (this.gridSize + this.doubleBorder);
-        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWith / 2) - 37;
+        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2) - $('.menu-expanded').width() - 32;
         const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2)
-        - 37 + this.$refs.seatWrapperRef.scrollTop;
-        const style = `left: ${left}px;top: ${top}px;width:${newWith}px;height:${newHeight}px`;
-        this.$refs.seatsRef.$el.style = style;
+        - $('.warp-breadcrum').height() - 32 + this.$refs.mainSeatAreaRef.scrollTop;
+        // const style = `left: ${left}px;top: ${top}px;width:${newWidth}px;height:${newHeight}px`;
+        // this.$refs.seatsRef.$el.style = style;
+        this.modifyStyle(this.$refs.seatsRef.$el.style, `${newWidth}px`, `${newHeight}px`, `${top}px`, `${left}px`);
       } else if (this.$refs.facilityRef) { // 移动状态的设施
-        const newWith = this.facilityInfo.facilityWidth * (this.gridSize + this.doubleBorder);
+        const newWidth = this.facilityInfo.facilityWidth * (this.gridSize + this.doubleBorder);
         const newHeight = this.facilityInfo.facilityHeight * (this.gridSize + this.doubleBorder);
-        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWith / 2)  - 37;
-        const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2)
-         - 37 + this.$refs.seatWrapperRef.scrollTop;
-        const style = `left: ${left}px;top: ${top}px;width:${newWith}px;height:${newHeight}px`;
-        this.$refs.facilityRef.$el.style = style;
+        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2) - $('.menu-expanded').width() - 32;
+        const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2) - $('.warp-breadcrum').height()
+         - 32 + this.$refs.mainSeatAreaRef.scrollTop;
+        // const style = `left: ${left}px;top: ${top}px;width:${newWidth}px;height:${newHeight}px`;
+        // this.$refs.facilityRef.$el.style = style;
+        this.modifyStyle(this.$refs.facilityRef.$el.style, `${newWidth}px`, `${newHeight}px`, `${top}px`, `${left}px`);
       } else if (this.enableAddSeat) { // 添加单个座位
         const row = e.target.getAttribute('row');
         if (!row) {
@@ -1227,33 +1430,36 @@ export default {
         }
         const top = e.target.offsetTop;
         const left = e.target.offsetLeft;
-        const style = `left: ${left - 6}px;top: ${top - 6}px;`;
-        this.$refs.addSeatDivRef.style = style;
+        // const style = `left: ${left - 6}px;top: ${top - 6}px;`;
+        // this.$refs.addSeatDivRef.style = style;
+        this.modifyStyle(this.$refs.addSeatDivRef.style, '', '', `${top - 11}px`, `${left - 11}px`);
       } else if (this.isMouseDown && !this.editState) {
         this.reactArea.endX = e.clientX;
         this.reactArea.endY = e.clientY - this.reactArea.scrollTop
-        + this.$refs.seatWrapperRef.scrollTop;
+        + this.$refs.mainSeatAreaRef.scrollTop;
         let leftValue = 0;
         let topValue = 0;
         const widthValue = Math.abs(this.reactArea.startX - this.reactArea.endX);
         const heightValue = Math.abs(this.reactArea.startY - this.reactArea.endY);
         if (this.reactArea.startX >= this.reactArea.endX) {
-          leftValue = this.reactArea.endX - this.$refs.seatWrapperRef.offsetLeft - 32;
+          leftValue = this.reactArea.endX - this.$refs.seatWrapperRef.offsetLeft - $('.menu-expanded').width() - 32;
         } else {
-          leftValue = this.reactArea.startX - this.$refs.seatWrapperRef.offsetLeft - 32;
+          leftValue = this.reactArea.startX - this.$refs.seatWrapperRef.offsetLeft - $('.menu-expanded').width() - 32;
         }
         if (this.reactArea.startY > this.reactArea.endY) {
-          topValue = this.reactArea.endY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop - 50;
+          topValue = this.reactArea.endY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop - $('.warp-breadcrum').height() - 50;
         } else {
-          topValue = this.reactArea.startY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop - 50;
+          topValue = this.reactArea.startY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop - $('.warp-breadcrum').height() - 50;
         }
         // 判断同时有宽高才开始画虚线框
 
         if (this.reactArea.startX !== this.reactArea.endX
         && this.reactArea.startY !== this.reactArea.endY) {
-          const style = `left: ${leftValue}px;top: ${topValue}px;
-                    width: ${widthValue}px;height: ${heightValue}px;`;
-          this.$refs.selectedArea.style = style;
+          // const style = `left: ${leftValue}px;top: ${topValue}px;
+          //           width: ${widthValue}px;height: ${heightValue}px;`;
+          // this.$refs.selectedArea.style = style;
+          this.modifyStyle(this.$refs.selectedArea.style, `${widthValue}px`, `${heightValue}px`, `${topValue}px`, `${leftValue}px`);
+          this.modifyStyle(this.$refs.popDiv.style, `${widthValue}px`, `${heightValue}px`, `${topValue}px`, `${leftValue}px`);
         }
         const children = this.$refs.innerSeatWrapperRef.getElementsByClassName('selectSeat');
         const childrenHeight = this.gridSize + 5;
@@ -1294,13 +1500,13 @@ export default {
         }
       }
     },
-    // 修改style 属性 target,width,heigth,top,left 为了兼容ie
-    modifyStyle(target, width, heigth, top, left) {
+    // 修改style 属性 target,width,height,top,left 为了兼容ie
+    modifyStyle(target, width, height, top, left) {
       if (width !== '') {
         target.width = width;
       }
-      if (heigth !== '') {
-        target.height = heigth;
+      if (height !== '') {
+        target.height = height;
       }
       if (top !== '') {
         target.top = top;
@@ -1313,41 +1519,107 @@ export default {
     // target:需要替换样式的目标对象）
     replaceCss(toSelected, target) {
       if (toSelected) {
-        target.replace('normal-seat-left', 'normal-seat-selected-left');
-        target.replace('normal-seat-right', 'normal-seat-selected-right');
-        target.replace('normal-seat-up', 'normal-seat-selected-up');
-        target.replace('normal-seat-down', 'normal-seat-selected-down');
-        target.replace('senior-seat-left', 'senior-seat-selected-left');
-        target.replace('senior-seat-right', 'senior-seat-selected-right');
-        target.replace('senior-seat-up', 'senior-seat-selected-up');
-        target.replace('senior-seat-down', 'senior-seat-selected-down');
+        if (target.contains('normal-seat-left')) {
+          target.remove('normal-seat-left');
+          target.add('normal-seat-selected-left');
+        }
+        if (target.contains('normal-seat-right')) {
+          target.remove('normal-seat-right');
+          target.add('normal-seat-selected-right');
+        }
+        if (target.contains('normal-seat-up')) {
+          target.remove('normal-seat-up');
+          target.add('normal-seat-selected-up');
+        }
+        if (target.contains('normal-seat-down')) {
+          target.remove('normal-seat-down');
+          target.add('normal-seat-selected-down');
+        }
+        if (target.contains('senior-seat-left')) {
+          target.remove('senior-seat-left');
+          target.add('senior-seat-selected-left');
+        }
+        if (target.contains('senior-seat-right')) {
+          target.remove('senior-seat-right');
+          target.add('senior-seat-selected-right');
+        }
+        if (target.contains('senior-seat-up')) {
+          target.remove('senior-seat-up');
+          target.add('senior-seat-selected-up');
+        }
+        if (target.contains('senior-seat-down')) {
+          target.remove('senior-seat-down');
+          target.add('senior-seat-selected-down');
+        }
+        // IE11 不支持
+        // target.replace('normal-seat-left', 'normal-seat-selected-left');
+        // target.replace('normal-seat-right', 'normal-seat-selected-right');
+        // target.replace('normal-seat-up', 'normal-seat-selected-up');
+        // target.replace('normal-seat-down', 'normal-seat-selected-down');
+        // target.replace('senior-seat-left', 'senior-seat-selected-left');
+        // target.replace('senior-seat-right', 'senior-seat-selected-right');
+        // target.replace('senior-seat-up', 'senior-seat-selected-up');
+        // target.replace('senior-seat-down', 'senior-seat-selected-down');
       } else {
-        target.replace('normal-seat-selected-left', 'normal-seat-left');
-        target.replace('normal-seat-selected-right', 'normal-seat-right');
-        target.replace('normal-seat-selected-up', 'normal-seat-up');
-        target.replace('normal-seat-selected-down', 'normal-seat-down');
-        target.replace('senior-seat-selected-left', 'senior-seat-left');
-        target.replace('senior-seat-selected-right', 'senior-seat-right');
-        target.replace('senior-seat-selected-up', 'senior-seat-up');
-        target.replace('senior-seat-selected-down', 'senior-seat-down');
+        if (target.contains('normal-seat-selected-left')) {
+          target.add('normal-seat-left');
+          target.remove('normal-seat-selected-left');
+        }
+        if (target.contains('normal-seat-selected-right')) {
+          target.add('normal-seat-right');
+          target.remove('normal-seat-selected-right');
+        }
+        if (target.contains('normal-seat-selected-up')) {
+          target.add('normal-seat-up');
+          target.remove('normal-seat-selected-up');
+        }
+        if (target.contains('normal-seat-selected-down')) {
+          target.add('normal-seat-down');
+          target.remove('normal-seat-selected-down');
+        }
+        if (target.contains('senior-seat-selected-left')) {
+          target.add('senior-seat-left');
+          target.remove('senior-seat-selected-left');
+        }
+        if (target.contains('senior-seat-selected-right')) {
+          target.add('senior-seat-right');
+          target.remove('senior-seat-selected-right');
+        }
+        if (target.contains('senior-seat-selected-up')) {
+          target.add('senior-seat-up');
+          target.remove('senior-seat-selected-up');
+        }
+        if (target.contains('senior-seat-selected-down')) {
+          target.add('senior-seat-down');
+          target.remove('senior-seat-selected-down');
+        }
+        // IE 11 不支持
+        // target.replace('normal-seat-selected-left', 'normal-seat-left');
+        // target.replace('normal-seat-selected-right', 'normal-seat-right');
+        // target.replace('normal-seat-selected-up', 'normal-seat-up');
+        // target.replace('normal-seat-selected-down', 'normal-seat-down');
+        // target.replace('senior-seat-selected-left', 'senior-seat-left');
+        // target.replace('senior-seat-selected-right', 'senior-seat-right');
+        // target.replace('senior-seat-selected-up', 'senior-seat-up');
+        // target.replace('senior-seat-selected-down', 'senior-seat-down');
       }
     },
     // 鼠标点击事件
     mousedown(e) {
       // this.modifyStyle();
-      if (!this.editState && e.target.classList.contains('square-block')) {
-        this.reactArea.scrollTop = this.$refs.seatWrapperRef.scrollTop;
+      if (!this.editState && e.target.classList.contains('block-area')) {
+        this.reactArea.scrollTop = this.$refs.mainSeatAreaRef.scrollTop;
         this.reactArea.startX = e.clientX;
         this.reactArea.startY = e.clientY;
         this.isMouseDown = true;
       }
       // 判断点击的位置是否在格子上
       const row = e.target.getAttribute('row');
-      if (!row) {
+      const column = e.target.getAttribute('column');
+      if (!row || !column) {
         this.forbidden = true;// 不可放置
         return;
       }
-      const column = e.target.getAttribute('column');
 
       // 如果有可以拖动的设施或者模型点击后 确定位置取消拖拽状态
       if (this.showDraggModel) { // 添加模型
@@ -1355,7 +1627,17 @@ export default {
         const topIndex = parseInt(row, 10) - Math.ceil(this.seatModelArrayHeight / 2) + 1;
         const leftIndex = parseInt(column, 10) - Math.ceil(this.seatModelArrayWidth / 2) + 1;
         // 将座位的数据添加到二维数组中
-        // step 1 判断放置的位置是否被占(除了围墙)
+
+        // step 1 判断围墙是否越界
+        if (topIndex < 2 || leftIndex < 2 || topIndex + this.seatModelArrayHeight > this.rows - 2
+        || leftIndex + this.seatModelArrayWidth > this.columns - 2
+        ) {
+          this.forbidden = true;// 不可放置
+          // console.log('越界');
+          return;
+        }
+
+        // step 2 判断放置的位置是否被占(除了围墙)
         for (let i = 0; i < this.seatModelArrayHeight; i += 1) {
           for (let j = 0; j < this.seatModelArrayWidth; j += 1) {
             if (this.seatTemplate.layoutArray[i + topIndex][j + leftIndex].type !== 0
@@ -1364,14 +1646,6 @@ export default {
               return;
             }
           }
-        }
-        // step 2 判断围墙是否越界
-        if (topIndex < 2 || leftIndex < 2 || topIndex + this.seatModelArrayHeight > this.rows - 2
-        || leftIndex + this.seatModelArrayWidth > this.columns - 2
-        ) {
-          this.forbidden = true;// 不可放置
-          // console.log('越界');
-          return;
         }
 
         // setp 3 放置座位
@@ -1388,8 +1662,6 @@ export default {
             }
           }
         }
-        // // step 3 计算围墙
-        // this.computeWall();
         // step 4 座位模型添加成功移除拖拽的 模型图片
         this.showDraggModel = false;
         this.enableEvent = true;// 开启设施图片的鼠标事件
@@ -1407,10 +1679,37 @@ export default {
         // 如果是旋转90或这270
         if (this.facilityInfo.facilityOrientation === 'l'
         || this.facilityInfo.facilityOrientation === 'r') {
+          // 长度偶数
+          if (this.facilityInfo.facilityWidth % 2 === 0) {
+            if (this.facilityInfo.facilityHeight < this.facilityInfo.facilityWidth) {
+              topIndex = parseInt(row, 10) - Math.ceil(this.facilityInfo.facilityHeight / 2) + 1;
+              leftIndex = parseInt(column, 10) - Math.ceil(this.facilityInfo.facilityWidth / 2) + 1;
+            } else if (this.facilityInfo.facilityHeight % 2 === 0) {
+              topIndex = parseInt(row, 10) - Math.ceil(this.facilityInfo.facilityHeight / 2) + 1;
+              leftIndex = parseInt(column, 10) - Math.ceil(this.facilityInfo.facilityWidth / 2) + 1;
+            } else {
+              topIndex = parseInt(row, 10) - Math.ceil(this.facilityInfo.facilityHeight / 2) + 2;
+              leftIndex = parseInt(column, 10) - Math.ceil(this.facilityInfo.facilityWidth / 2);
+            }
+          } else if (this.facilityInfo.facilityHeight < this.facilityInfo.facilityWidth) {
+            if (this.facilityInfo.facilityHeight % 2 === 0) {
+              topIndex = parseInt(row, 10) - Math.ceil(this.facilityInfo.facilityHeight / 2);
+              leftIndex = parseInt(column, 10) - Math.ceil(this.facilityInfo.facilityWidth / 2) + 2;
+            } else {
+              topIndex = parseInt(row, 10) - Math.ceil(this.facilityInfo.facilityHeight / 2) + 1;
+              leftIndex = parseInt(column, 10) - Math.ceil(this.facilityInfo.facilityWidth / 2) + 1;
+            }
+          } else if (this.facilityInfo.facilityHeight % 2 === 0) {
+            topIndex = parseInt(row, 10) - Math.ceil(this.facilityInfo.facilityHeight / 2) + 1;
+            leftIndex = parseInt(column, 10) - Math.ceil(this.facilityInfo.facilityWidth / 2) + 1;
+          }
+
           topIndex -= parseInt((this.facilityInfo.facilityWidth
-           - this.facilityInfo.facilityHeight) / 2, 10);
+          - this.facilityInfo.facilityHeight) / 2, 10);
+
           leftIndex += parseInt((this.facilityInfo.facilityWidth
           - this.facilityInfo.facilityHeight) / 2, 10);
+
           if (topIndex < 2 || leftIndex < 2 || topIndex
           + this.facilityInfo.facilityWidth > this.rows - 2
                   || leftIndex + this.facilityInfo.facilityHeight > this.columns - 2) {
@@ -1456,6 +1755,7 @@ export default {
           id: facilityId,
           topIndex,
           leftIndex,
+          rostrumHeight: this.facilityInfo.rostrumHeight,
           facilityWidth: this.facilityInfo.facilityWidth,
           facilityHeight: this.facilityInfo.facilityHeight,
           facilityType: this.facilityInfo.facilityType,
@@ -1513,52 +1813,41 @@ export default {
           type: 1, id: '', label: '', orientation: 'u',
         });
         // step 3 计算围墙
-      } else { // 编辑单个座位      console.log(row)
-        this.cancelEdit();
+      } else { // 编辑单个座位
+        this.cancelSelected();
         const tempSeat = this.seatTemplate.layoutArray[row][column];
         this.seatTemplate.layoutArray[row][column].selected = true;// 换背景图片
         // 1 普通座位,2 高管座
         if (tempSeat.type === 1 || tempSeat.type === 2) {
-          // 显示出编辑框的位置
-          let left = e.target.offsetLeft + (this.gridSize + this.doubleBorder) / 2 - 314 / 2;
-          let top = e.target.offsetTop + this.gridSize + this.doubleBorder * 2;
-          if (column > 20) {
-            left -= 314 / 4;
-          }
-          if (column < 3) {
-            left += 314 / 4;
-          }
-          if (row > 15) {
-            top -= 330;
-          }
-          const style = `left: ${left}px;top: ${top}px;width:314px;height:226px`;
-          this.editDivStyle = style;
-          this.editInfo.type = '座位';
-          this.editInfo.top = row;
-          this.editInfo.left = column;
-          this.seatType = tempSeat.type;
-          this.seatOrientation = tempSeat.orientation;
-          this.showEditForm = true;
+          // 切换座位时pop 重新渲染
+          this.showEditForm = false;
+          this.$nextTick(() => {
+            this.modifyStyle(this.$refs.popDiv.style, `${this.gridSize}px`, `${this.gridSize}px`, `${e.target.offsetTop}px`, `${e.target.offsetLeft}px`);
+            this.editInfo.type = '座位';
+            this.editInfo.top = row;
+            this.editInfo.left = column;
+            this.editInfo.id = 'NO';
+            this.seatType = tempSeat.type;
+            this.seatOrientation = tempSeat.orientation;
+            this.showEditForm = true;
+          });
+        } else {
+          this.showEditForm = false;
         }
       }
     },
+    // 鼠标放开事件（框选时）
     mouseup() {
       this.forbidden = false;
       if (!this.editState) {
         this.isMouseDown = false;
-        let left = parseInt(this.$refs.selectedArea.style.left, 10);
-        let top = parseInt(this.$refs.selectedArea.style.top, 10);
-        const style = `left: 0;top: 0;
-        width: 0px;height: 0px;`;
-        this.$refs.selectedArea.style = style;
+        this.modifyStyle(this.$refs.selectedArea.style, `${0}px`, `${0}px`, `${0}px`, `${0}px`);
         const { length } = document.getElementsByClassName('active-seat');
         if (length > 0) {
-          // 显示出编辑框s
-          left += 314 / 2;
-          top += 226 / 2;
-          const styleEdit = `left: ${left}px;top: ${top}px;width:314px;height:226px`;
-          this.editDivStyle = styleEdit;
           this.editInfo.type = '多个座位';
+          this.editInfo.id = 'NOs';
+          this.seatType = '';// 默认空没选座位类型
+          this.seatOrientation = '';// 默认空没选座位朝向
           this.showEditForm = true;
         }
       }
@@ -1585,23 +1874,27 @@ export default {
       // ) / this.columns - this.doubleBorder;
       this.gridSize = 32;
     },
+
+    // 设置是否监听浏览器刷新时弹窗提示
+    setIsBeforeunload(val) {
+      this.$store.commit('breadcrumb/setIsBeforeunload', val);
+    },
   },
 
   created() {
     // 根据参数判断是编辑还是新增
-    const template = typeof (this.$route.params.seatTemplateItem) === 'undefined'
+    const template = this.$route.params.seatTemplateItem == null
       ? [] : Object.keys(this.$route.params.seatTemplateItem);
     this.seatTemplateNameArr = this.$route.params.layoutNameArr;
-
     if (template.length === 0) { // 新增
       const tempName = this.$route.params.seatTemplateName;
-      this.seatTemplate.name = tempName === null ? '' : tempName;
+      this.seatTemplate.name = tempName == null ? '' : tempName;
       // 初始化 布局二维数组
       this.initSeatArray();
     } else { // 编辑
       this.gridSize = 32;
       this.dialogModelSelectVisible = false;
-      this.seatTemplate = this.$route.params.seatTemplateItem;
+      this.seatTemplate = JSON.parse(JSON.stringify(this.$route.params.seatTemplateItem));
       // 编辑的时候校验名称是否重复 除去自身
       const index = this.seatTemplateNameArr.indexOf(this.seatTemplate.name);
       if (index !== -1) {
@@ -1614,8 +1907,18 @@ export default {
     // 初始化遮罩层大小
     this.maskStyle = `{ height: ${document.body.clientHeight}px;
     height: ${document.body.clientHeight}px;}`;
+    //
+    this.clearValidates('templateform');
   },
-
+  beforeRouteEnter(to, from, next) {
+    next((vm) => {
+      vm.setIsBeforeunload(true);
+    });
+  },
+  beforeRouteLeave(to, from, next) {
+    this.setIsBeforeunload(false);
+    next();
+  },
 };
 </script>
 
@@ -1645,24 +1948,26 @@ export default {
     .vue-input /deep/.el-input{
       width: 280px;
     }
- /deep/.el-input-number {
-  width: 90px;
-}
+
+    .param-input/deep/.el-input__inner {
+      width: 68px;
+    }
     /deep/.el-dialog__body {
     padding: 20px 15px 30px 15px;
-   /deep/ .el-form-item__label{
-     padding:0
-   }
     }
     /deep/.el-form-item__label{
       line-height: 40px;
+      padding-left:7px;
     }
+    /deep/.el-dialog__footer {
+    padding: 15px 20px 35px;
+}
 
    /* 编辑操作时的 背景框 */
   .mask {
     width: 100%;
     height: 100%;
-     opacity: 0.2;
+     opacity: 0.0;
      position: fixed;
     top: 0;
     left: 0;
@@ -1670,12 +1975,18 @@ export default {
     z-index: 998;
   }
   .seatLayout{
+
     flex: 1;
     display: flex;
     flex-direction: column;
-    height: 100%;
     overflow: hidden;
-
+  }
+  .mainSeatArea{
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    overflow: auto;
   }
   .title-wrapper{
     width:1060px;
@@ -1692,6 +2003,7 @@ export default {
     text-align: left;
     justify-content: space-between;
     align-items: center;
+    flex-shrink:0;
     button{
       width: 117px;
       height: 36px;
@@ -1721,14 +2033,16 @@ export default {
   .seat-wrapper{
     // height: 1020px;
     width:1060px;
+    height:900px;
     border: 1px solid @green;
     margin-left: 80px;
     position:relative;
-    overflow: auto;
     background: #FCFCFC;
     border-radius: 2px;
-    flex-grow:1;
+     flex-grow:1;
+       z-index: 1001;
     margin-bottom: 40px;
+    flex-shrink: 0;
   }
   /*画布区域大小*/
   .inner-seat-wrapper{
@@ -1743,113 +2057,102 @@ export default {
   }
   /*画布中小正方形 */
   .square-block{
-    /* float:left; */
-    // border-radius: 2px;
-    // border: #FCFCFC 5px solid;
     margin:5px;
     background: #F2F4F5;
   }
- .square-noneblock{
-
-     margin:5px;
-    background: white;
-
- }
   .el-col_empty{
     min-height:1px;
-  }
-
-.inner-seat{
-    width:100%;
-    height:100%;
-    cursor: pointer;
   }
  .normal-seat-left{
      background: url('../../../assets/image/web/seat/normal-seat-left.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
   }
  .normal-seat-right{
     background: url('../../../assets/image/web/seat/normal-seat-right.svg')
       center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
   }
    .normal-seat-up{
     background: url('../../../assets/image/web/seat/normal-seat-up.svg')
      center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
   }
  .normal-seat-down{
     background: url('../../../assets/image/web/seat/normal-seat-down.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
   }
    .normal-seat-selected-left{
      background: url('../../../assets/image/web/seat/normal-seat-selected-left.svg')
      center center no-repeat;
-    background-size: 100% 100%;
-
+    background-size: 32px 32px;
   }
  .normal-seat-selected-right{
     background: url('../../../assets/image/web/seat/normal-seat-selected-right.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
   }
    .normal-seat-selected-up{
-   background: url('../../../assets/image/web/seat/normal-seat-selected-up.svg')
-      center center no-repeat;
-    background-size: 100% 100%;
+    background: url('../../../assets/image/web/seat/normal-seat-selected-up.svg')
+    center center no-repeat;
+    background-size: 32px  32px;
   }
  .normal-seat-selected-down{
     background: url('../../../assets/image/web/seat/normal-seat-selected-down.svg')
     center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
   .senior-seat-left{
-     background: url('../../../assets/image/web/seat/senior-seat-left.svg')
-       center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
-
+    background: url('../../../assets/image/web/seat/senior-seat-left.svg')
+    center center no-repeat;
+    background-size: 32px  32px;
   }
  .senior-seat-right{
     background: url('../../../assets/image/web/seat/senior-seat-right.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
+
   }
   .senior-seat-down{
     background: url('../../../assets/image/web/seat/senior-seat-down.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
+
   }
   .senior-seat-up{
     background: url('../../../assets/image/web/seat/senior-seat-up.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
+
   }
  .senior-seat-selected-left{
     background: url('../../../assets/image/web/seat/senior-seat-selected-left.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
+
   }
  .senior-seat-selected-right{
     background: url('../../../assets/image/web/seat/senior-seat-selected-right.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
+
   }
   .senior-seat-selected-down{
     background: url('../../../assets/image/web/seat/senior-seat-selected-down.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
+
   }
  .senior-seat-selected-up{
     background: url('../../../assets/image/web/seat/senior-seat-selected-up.svg')
     center center no-repeat;
-    background-size: 100% 100%;
+    background-size: 32px  32px;
+
   }
   .senior-seat{
-    background-size: 100% 100%;
+    background-size: 32px  32px;
+
   }
   .add-seat{
     pointer-events: none;
@@ -1877,38 +2180,91 @@ export default {
     height: 132px;
     border-radius: 2px;
     border: 1px solid #D2E0F3;
-     // 居中 （flex）
-      // box-sizing:border-box;
-    display: grid;
-    display: -ms-grid;
-    // -ms-grid-columns: 1fr auto 1fr;
-    // grid-template-columns: 1fr auto 1fr;
-        -ms-vertical-align: middle;
-         -ms-text-align: center;
-    vertical-align: middle;
     text-align: center;
-    img {
-       margin-left: 43px;
+    div{
+       margin-left: 34px;
        margin-top: 25px;
+       margin-bottom: 15px;
+       height: 50px;
+       width: 62px;
+    }
+    img{
+        margin-left: 43px;
+       margin-top: 25px;
+       margin-bottom: 15px;
        display: block;
     }
+   #table{
+       background: url('../../../assets/image/web/seat/table.svg')
+       center center no-repeat;
+      background-size: 60px 48px;
+    }
+    #mainScreen{
+       background: url('../../../assets/image/web/seat/mainScreen.svg')
+       center center no-repeat;
+       background-size: 50px 48px;
+      }
+    #rostrum{
+        background: url('../../../assets/image/web/seat/rostrum.svg')
+        center center no-repeat;
+       background-size: 56px 48px;
+    }
+    #door{
+     background: url('../../../assets/image/web/seat/door.svg')
+     center center no-repeat;
+     background-size: 40px 48px;
+   }
     &:hover{
       border: 1px solid @green;
       background: #F3FFFE;
       #table{
-       content: url('../../../assets/image/web/seat/table-hover.svg');
+       background: url('../../../assets/image/web/seat/table-hover.svg')
+       center center no-repeat;
+            background-size: 60px 48px;
       }
       #mainScreen{
-       content: url('../../../assets/image/web/seat/mainScreen-hover.svg');
-      }
+       background: url('../../../assets/image/web/seat/mainScreen-hover.svg')
+      center center no-repeat;
+      background-size: 50px 48px;
+    }
       #rostrum{
-        content: url('../../../assets/image/web/seat/rostrum-hover.svg');
+        background: url('../../../assets/image/web/seat/rostrum-hover.svg')
+        center center no-repeat;
+                   background-size: 56px 48px;
       }
       #door{
-        content: url('../../../assets/image/web/seat/door-hover.svg');
+       background: url('../../../assets/image/web/seat/door-hover.svg')
+       center center no-repeat;
+        background-size: 40px 48px;
       }
     }
   }
+  .grid-content-disable {
+    width: 132px;
+    height: 132px;
+    border-radius: 2px;
+    border: 1px solid #e4e8eb;
+    text-align: center;
+    background: #f4f8f9;
+    div {
+      margin-left: 34px;
+       margin-top: 25px;
+       margin-bottom: 15px;
+       height: 50px;
+       width: 62px;
+    }
+   #rostrum{
+      background: url('../../../assets/image/web/seat/rostrum-disable.svg')
+      center center no-repeat;
+      background-size: 56px 48px;
+    }
+  #door{
+     background: url('../../../assets/image/web/seat/door-disable.svg')
+     center center no-repeat;
+    background-size: 40px 48px;
+   }
+  }
+
   .dialog-model{
     height: 252px;
     background: #F3FFFE;
@@ -1916,6 +2272,10 @@ export default {
   }
  .dialog-model-detail{
     height: 390px;
+      .el-input {
+      width: 100px;
+
+    }
   }
   .div-preview{
     display: flex;
@@ -1923,13 +2283,25 @@ export default {
     align-items:center;
     width: 197px;
     height: 198px;
-    opacity: 0.42;
-    border: 1px solid #86D7CD;
-    background:
-      -webkit-linear-gradient(top, transparent 65px, #86D7CD 66px),
-      -webkit-linear-gradient(left, transparent 65px, #86D7CD 66px);
-    background-color: #F4FFFE;
+    opacity: 0.8;
+    border: 1px solid #dcfaf6;
+    // background:-moz-linear-gradient(top,transparent 65px, #86D7CD 66px ),
+    //-moz-linear-gradient(left, transparent 65px, #86D7CD 66px);
+    background:-webkit-linear-gradient(top,transparent 65px, #dcfaf6 65px),
+    -webkit-linear-gradient(left, transparent 65px, #dcfaf6 65px);
+     background-color:rgba(244,255,254,0.42)!important;
+    // background-color: #F4FFFE;
     background-size: 66px 66px;
+  }
+  .div-preview-ie{
+     background:-ms-linear-gradient(top,transparent 65px, #dcfaf6 66px),
+     -ms-linear-gradient(left, transparent 65px, #dcfaf6 66px);
+    //  background-color: #F4FFFE;
+    background-color:rgba(244,255,254,0.42)!important;
+    background-size: 66px 66px;
+  }
+  .child-pre{
+   position:  relative;
   }
   .tipsSpan{
       font-size: 10px;
@@ -1938,30 +2310,7 @@ export default {
       color: #B2C7E3;
       line-height: 14px;
   }
-  .edit-form {
-    // pointer-events: none;
-    position: absolute;
 
-  }
- .edit-btn-wrapper{
-   button{
-      width: 64px;
-      height: 28px;
-      border-radius: 2px;
-      font-size: 14px;
-      font-family: PingFangSC-Regular, PingFang SC;
-      font-weight: 400;
-      line-height: 4px;
-      float:right
-    }
-    .delete-btn{
-      float: left;
-          color: #F56C6C;
-          background: #fff;
-          border: none;
-          width:70px;
-      }
- }
  .unselect {
     -webkit-user-select: none;
     -moz-user-select: none;
@@ -1970,5 +2319,15 @@ export default {
     -o-user-select: none;
      user-select: none;
 }
-
+.block-area{
+      //  opacity: 0.1;
+      // background-color: red;
+      position: absolute;
+}
+.popDiv{
+  position: absolute;
+  opacity:0.5;
+  background-color:red;
+ pointer-events: none;
+}
 </style>

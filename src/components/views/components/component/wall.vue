@@ -1,17 +1,14 @@
 <template>
   <div class='divWall' >
-    <div v-for="(row,rowIndex) in wallArray" :key="rowIndex" >
+    <div v-for="(row,rowIndex) in wallArray" :key="rowIndex" style="display: flex;">
       <div v-for="(item,colIndex) in row" :key="colIndex"
         class="square-block" :style="{width:(gridSize+borderWidth)+'px'
-          ,height:(gridSize+borderWidth)+'px'}">
-            <div class="inner-seat"
-              :class="styleObject(wallArray[rowIndex][colIndex])"
-              @mousedown="setDoor(rowIndex,colIndex,wallArray[rowIndex][colIndex])"
-           >
+          ,height:(gridSize+borderWidth)+'px'}"
+            :class="styleObject(wallArray[rowIndex][colIndex])"
+           @mousedown="setDoor(rowIndex,colIndex,wallArray[rowIndex][colIndex])">
             </div>
       </div>
     </div>
-  </div>
 </template>
 
 <script>
@@ -138,15 +135,9 @@ export default {
   }
   /*画布中小正方形 */
   .square-block{
-    float:left;
     display: flex;
     justify-content: center;
     align-items: center;
-  }
-  .inner-seat{
-    width:100%;
-    height:100%;
-    cursor: pointer;
   }
   .top-left{
     background: url('../../../../assets/image/web/seat/wall-top-left.svg')

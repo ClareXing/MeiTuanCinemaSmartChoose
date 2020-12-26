@@ -1,18 +1,27 @@
 <template>
-<div :class="dragClass" >
-     <!--根据相关参数画模型-->
-     <!-- <div class="mid-liney" v-if="reqType!==1"></div>
-     <div class="mid-linex" v-if="reqType!==1"></div> -->
-     <div v-for="(row,rowIndex) in seatModelArray" :key="rowIndex" :v-model="seatModelArray">
+<div :class="dragClass" :style="{width:divWidth*(gridSize+doubleBorder)+'px',
+     height:divHeight*(gridSize+doubleBorder)+'px'}">
+     <div v-for="(row,rowIndex) in seatModelArray" :key="rowIndex"
+        :v-model="seatModelArray"   style="display: flex;">
        <div v-for="(item,colIndex) in row" :key="colIndex"
-        :class="[preClass,seatStyle(seatModelArray[rowIndex][colIndex].type
-        ,seatModelArray[rowIndex][colIndex].orientation)]"
+        :class="[preClass,seatClass(item.type,item.orientation)]"
          :style="{width:gridSize+'px',height:gridSize+'px'
-        ,border:'#F3FFFE '+ doubleBorder/2+'px solid'}" class="inner-seat">
+        ,border:'#F3FFFE '+ doubleBorder/2+'px solid'}" >
       </div>
     </div>
-     <!--根据相关seats 复原座位-->
-     <!--画小图-->
+
+    <div v-if="reqType===4 && modelType!=='deskShape'&&
+        ((modelType==='uShape'&&divWidth>1&&divHeight>1)||
+        (modelType==='gyrationShape'&&divWidth>2&&divHeight>2))" class='noseatArea'
+      :style="{top:orientation==='u'?doubleBorder/2+'px':(doubleBorder*3/2+gridSize)+'px',
+      left:orientation==='l'?doubleBorder/2+'px':(gridSize+doubleBorder*3/2)+'px',
+      width:modelType==='uShape'&& (orientation==='l'||orientation==='r')?
+      (divWidth-1)*(gridSize+doubleBorder)-doubleBorder+'px':
+      (divWidth-2)*(gridSize+doubleBorder)-doubleBorder+'px',
+      height:modelType==='uShape'&& (orientation==='u'||orientation==='d')?
+      (divHeight-1)*(gridSize+doubleBorder)-doubleBorder+'px':
+      (divHeight-2)*(gridSize+doubleBorder)-doubleBorder+'px'}">
+    </div>
 </div>
 </template>
 
@@ -60,16 +69,28 @@ export default {
       return this.reqType !== 4 ? 'square-block' : 'pre-square-block';
     },
     divWidth() {
-      return this.seatModelArrayWidth;
+      if (this.modelType === 'uShape' && (this.orientation === 'u' || this.orientation === 'd')) {
+        return this.seatModelArrayWidth > 15 ? 15 : this.seatModelArrayWidth;
+      }
+      return this.seatModelArrayWidth > 16 ? 16 : this.seatModelArrayWidth;
     },
     divHeight() {
-      return this.seatModelArrayHeight;
+      if (this.modelType === 'uShape') {
+        // 朝上或者朝下
+        if (this.orientation === 'u' || this.orientation === 'd') {
+          return this.seatModelArrayHeight > 16 ? 16 : this.seatModelArrayHeight;
+        }// 朝左或者朝右
+        return this.seatModelArrayHeight > 15 ? 15 : this.seatModelArrayHeight;
+      } if (this.modelType === 'gyrationShape') {
+        return this.seatModelArrayHeight > 12 ? 12 : this.seatModelArrayHeight;
+      }
+      return this.seatModelArrayHeight > 12 ? 12 : this.seatModelArrayHeight;
     },
     seatModelArray() {
       return this.renderSeat();
     },
 
-    seatStyle() {
+    seatClass() {
       return (type, orientation) => {
         // 不是座位
         if (type !== 1) {
@@ -112,8 +133,8 @@ export default {
   methods: {
     // 渲染座位区域 目前只有U型
     renderSeat() {
-      const columns = this.seatModelArrayWidth;
-      const rows = this.seatModelArrayHeight;
+      const columns = this.divWidth;
+      const rows = this.divHeight;
       const { orientation } = this;
       const { circleNum } = this;
       // 确定第一个环的左上开始位置(最外环为第一个环)
@@ -309,14 +330,14 @@ export default {
     tableLayout(rows, columns, startRowIndex, startColIndex, oldArray, setValue = 1) {
       for (let i = 0; i < rows; i += 1) {
         for (let j = 0; j < columns; j += 1) {
-          oldArray[startRowIndex + i][startColIndex + j] = { type: setValue, orientation: 'd' };
+          oldArray[startRowIndex + i][startColIndex + j] = { type: setValue, orientation: 'u' };
         }
       }
       return oldArray;
     },
     initRectArray() {
       // 初始化布局
-      if (this.divWidth) {
+      if (this.divWidth && this.divHeight) {
         const rectArray = Array(this.divHeight).fill({ type: this.emptyFlag, orientation: '' })
           .map(() => Array(this.divWidth).fill({ type: this.emptyFlag, orientation: '' }));
         this.rectArray = rectArray;
@@ -335,23 +356,15 @@ export default {
 
   /*画布中小正方形 */
   .square-block{
-    float:left;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     background: #F3FFFE;
     opacity: 0.5;
     border-color:#F3FFFE
   }
   .pre-square-block{
-    float:left;
-    display: flex;
-    justify-content: center;
-    align-items: center;
     background:#F3FFFE;
   }
   .drag{
-      position: absolute;
+      position:absolute;
       top: 0;
       left: 0;
       pointer-events: none;
@@ -360,7 +373,7 @@ export default {
      background: rgba(13, 175, 156, 0.15);
   }
     .unset-drag{
-      position: absolute;
+      position:absolute;
       top: 0;
       left: 0;
       pointer-events: none;
@@ -369,91 +382,74 @@ export default {
      background: rgba(253, 87, 81, 0.15);
   }
   .undrag{
-     position: absolute;
+     position: relative;
      pointer-events: none;
      background-size: cover;
-  }
-  .inner-seat{
-    width:100%;
-    height:100%;
-    cursor: pointer;
   }
    .normal-seat-left{
      background: url('../../../../assets/image/web/seat/normal-seat-left.svg')
       center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
  .normal-seat-right{
     background: url('../../../../assets/image/web/seat/normal-seat-right.svg')
     center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
    .normal-seat-up{
    background: url('../../../../assets/image/web/seat/normal-seat-up.svg')
    center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
  .normal-seat-down{
     background: url('../../../../assets/image/web/seat/normal-seat-down.svg')
      center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
      .normal-seat-selected-left{
      background: url('../../../../assets/image/web/seat/normal-seat-selected-left.svg')
       center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
  .normal-seat-selected-right{
     background: url('../../../../assets/image/web/seat/normal-seat-selected-right.svg')
     center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
    .normal-seat-selected-up{
    background: url('../../../../assets/image/web/seat/normal-seat-selected-up.svg')
    center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
  .normal-seat-selected-down{
     background: url('../../../../assets/image/web/seat/normal-seat-selected-down.svg')
     center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
      .normal-seat-unset-left{
      background: url('../../../../assets/image/web/seat/normal-seat-unset-left.svg')
      center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
  .normal-seat-unset-right{
     background: url('../../../../assets/image/web/seat/normal-seat-unset-right.svg')
     center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
    .normal-seat-unset-up{
    background: url('../../../../assets/image/web/seat/normal-seat-unset-up.svg')
    center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
  .normal-seat-unset-down{
     background: url('../../../../assets/image/web/seat/normal-seat-unset-down.svg')
     center center no-repeat;
-    background-size: 100% 100%;
-   line-height: 42px;
+    background-size: 32px  32px;
   }
   .pre-normal-seat{
     background: #7AA4CA;
     background-size: 100% 100%;
-    border-radius: 2px;
+    border-radius: 4px;
   }
  .no-seat{
     background-size: 100% 100%;
@@ -462,5 +458,10 @@ export default {
   }
   .unselected-seat{
     background-size: 100% 100%;
+  }
+  .noseatArea{
+    position:absolute;
+    background: #EBEBEB;
+    border-radius: 2px;
   }
 </style>

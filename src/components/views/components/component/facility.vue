@@ -1,46 +1,50 @@
 <template>
-<div :class="[dragClass, transformClass]">
+<div :class="[dragClass, transformClass]" :style="{width:divWidth*(gridSize+doubleBorder)+'px',
+      height:divHeight*(gridSize+doubleBorder)+'px'}">
      <!--会议桌-->
      <div v-if="facilityType==='table'" :class='divTableClass'
-      :style="{width:facilityWidth*(gridSize+doubleBorder)+'px',
-      height:facilityHeight*(gridSize+doubleBorder)+'px'}" >
+      :style="{width:divWidth*(gridSize+doubleBorder)+'px',
+      height:divHeight*(gridSize+doubleBorder)+'px'}" >
     </div>
      <!--主席台-->
-    <div v-else-if="facilityType === 'rostrum'"  :class='divRostrumBoxClass'>
-      <div class='divRostrumSeats' v-if="holdSeatNum>0">
-         <div :style="{width:(facilityWidth-holdSeatNum)/2*(gridSize+doubleBorder)+'px',
-        height:(gridSize+doubleBorder)+'px'}"></div>
-        <div
-          v-for="(itme,Index) in holdSeatNum"
-          :key="Index"
-         :class="['rostrum-seat__common', rostrumSeatClass]"
-         :value="getArray[Index]"
-         :style="{width:gridSize+'px',height:gridSize+'px',margin:doubleBorder/2+'px'}"
-          @click="onClickSeatArrage(seatMap['主'+getArray[Index]])">
+    <div v-else-if="facilityType === 'rostrum'"  :class='divRostrumBoxClass'
+    :style="{width:divWidth*(gridSize+doubleBorder)+'px',
+         height:divHeight*(gridSize+doubleBorder)+'px'}">
+    <div class='divRostrumSeats' v-if="rostrumCount>0">
+          <div
+            v-for="(itme,index) in rostrumCount"
+            :key="index"
+            :class="rostrumSeatClass(index)"
+            :style="rostrumSeatStyle"
+            :value="getArray[index]"
+            @click="onClickSeatArrage(seatMap['主'+getArray[index]])">
             <span
               v-if="!seatView"
-            >{{ seatMap['主'+getArray[Index]] ? seatMap['主'+getArray[Index]].user_name : '' }}</span>
-            <span v-else>主{{getArray[Index]}}</span>
+              :title="getRostrumSeatUserNameBySeatIndex(index)"
+            >{{ getRostrumSeatUserNameBySeatIndex(index, true) }}</span>
+            <span v-else-if="!isPreview">主{{getArray[index]}}</span>
+          </div>
         </div>
-      </div>
-        <div :class='divRostrumClass' :style="{width:facilityWidth*(gridSize+doubleBorder)+'px',
-         height:(holdSeatNum>0?facilityHeight-1:facilityHeight)*(gridSize+doubleBorder)+'px'}">
-         </div>
+        <div :class='divRostrumClass' :style="{width:divWidth*(gridSize+doubleBorder)+'px',
+         height:divRostrumHeight*(gridSize+doubleBorder)+'px'}">
+        </div>
     </div>
      <!--门-->
     <div v-else-if="facilityType === 'door'"
-        :style="{width:(gridSize+doubleBorder)*facilityWidth+'px',
-        height:(gridSize+doubleBorder)*facilityHeight+'px'}" :class ='divDoorClass'>
+        :style="{width:(gridSize+doubleBorder)*divWidth+'px',
+        height:(gridSize+doubleBorder)*divHeight+'px'}" :class ='divDoorClass'>
     </div>
      <!--屏幕-->
-    <div v-else-if="facilityType === 'mainScreen'" class='divMainScreen'>
+    <div v-else-if="facilityType === 'mainScreen'" class='divMainScreen'
+         :style="{width:divWidth*(gridSize+doubleBorder)+'px',
+      height:divHeight*(gridSize+doubleBorder)+'px'}" >
        <img :src="reqType === 1?
        require('../../../../assets/image/web/seat/screen-selected-left.svg'):
       (reqType === 2?require('../../../../assets/image/web/seat/screen-left.svg'):
       require('../../../../assets/image/web/seat/screen-unset-left.svg'))"
        :style="{width:(gridSize+doubleBorder/2)+'px',
       height:(gridSize)+'px'}" class="bg-img">
-       <img v-for="(itme,index) in facilityWidth-2" :key="index"
+       <img v-for="(itme,index) in divWidth-2" :key="index"
        :src="reqType === 1?
        require('../../../../assets/image/web/seat/screen-selected-middle.svg' ):
       (reqType === 2?require('../../../../assets/image/web/seat/screen-middle.svg'):
@@ -61,7 +65,7 @@
 </template>
 
 <script>
-import { isEmpty, isFunction } from 'lodash';
+import { get, isEmpty, isFunction } from 'lodash';
 
 export default {
   /** 画模型 */
@@ -71,6 +75,7 @@ export default {
     facilityHeight: Number, // 高
     facilityType: String, // 设施类型
     facilityOrientation: String, // 朝向
+    rostrumHeight: Number, // 主席台高度
     // grid边框宽度
     doubleBorder: {
       type: Number,
@@ -118,7 +123,19 @@ export default {
     },
   },
   computed: {
-
+    rostrumSeatStyle() {
+      if (this.seatView) {
+        return {
+          width: `${this.gridSize}px`,
+          height: `${this.gridSize}px`,
+          margin: `${this.doubleBorder / 2}px`,
+        };
+      }
+      return {
+        width: '42px',
+        height: '42px',
+      };
+    },
     dragClass() {
       if (this.reqType === 1) {
         return 'drag';
@@ -128,11 +145,43 @@ export default {
       return 'dragUnset';
     },
 
+
+    divRostrumHeight() {
+      if (this.facilityType === 'rostrum') {
+        return this.rostrumHeight > 8 ? 8 : this.rostrumHeight;
+      }
+      return this.rostrumHeight === '' ? 0 : this.rostrumHeight;
+    },
     divWidth() {
+      if (this.facilityType === 'mainScreen') {
+        if (!this.facilityWidth) {
+          return 3;
+        }
+        if (this.facilityWidth > 10) {
+          return 10;
+        }
+        if (this.facilityWidth < 3) {
+          return 3;
+        }
+        return this.facilityWidth;
+      } if (this.facilityType === 'rostrum' || this.facilityType === 'table') {
+        return this.facilityWidth > 12 ? 12 : this.facilityWidth;
+      }
       return this.facilityWidth;
     },
     divHeight() {
+      if (this.facilityType === 'table') {
+        return this.facilityHeight > 12 ? 12 : this.facilityHeight;
+      } if (this.facilityType === 'rostrum') {
+        return this.facilityHeight > 9 ? 9 : this.facilityHeight;
+      }
       return this.facilityHeight;
+    },
+    rostrumCount() {
+      if (this.facilityType === 'rostrum') {
+        return this.holdSeatNum > 12 ? 12 : this.holdSeatNum;
+      }
+      return this.holdSeatNum;
     },
 
     facilityBlockArray() {
@@ -171,16 +220,25 @@ export default {
     },
 
     rostrumSeatClass() {
-      // 若为人员视图
-      if (!this.seatView && !isEmpty(this.seatMap)) {
-        return 'rostrum-seat__input';
-      }
-      if (this.reqType === 1) {
-        return 'rostrum-seat-selected';
-      } if (this.reqType === 2) {
-        return 'rostrum-seat';
-      }
-      return 'rostrum-seat-unset';
+      return (index) => {
+        let rostrumSeatClass = '';
+        if (this.seatView) { // 预览或者编辑模板时，座位视图
+          const userName = get(this.seatMap[`主${this.getArray[index]}`], 'user_name', '');
+          // 预览时，座位号已安排人员
+          if (!isEmpty(this.seatMap) && !isEmpty(userName)) {
+            rostrumSeatClass = 'rostrum-seat-selected rostrum-seat-span__selected';
+          } else if (this.reqType === 1) {
+            rostrumSeatClass = 'rostrum-seat-selected';
+          } else if (this.reqType === 2) {
+            rostrumSeatClass = 'rostrum-seat';
+          } else {
+            rostrumSeatClass = 'rostrum-seat-unset';
+          }
+        } else if (!isEmpty(this.seatMap)) { // 预览时，人员视图
+          rostrumSeatClass = 'rostrum-seat__input';
+        }
+        return `rostrum-seat__common ${rostrumSeatClass}`;
+      };
     },
 
     divRostrumClass() {
@@ -239,6 +297,13 @@ export default {
       return arr2;
     },
 
+    // 根据主席台座位数字下表，获取主席台座位人员名称
+    getRostrumSeatUserNameBySeatIndex(index, format) {
+      if (index < 0) return '';
+      const name = get(this.seatMap[`主${this.getArray[index]}`], 'user_name', '');
+      return format && name.length > 5 ? `${name.substr(0, 5)}…` : name;
+    },
+
     // 点击座位进行分配的回调
     onClickSeatArrage(val) {
       if (
@@ -255,13 +320,16 @@ export default {
 </script>
 
 <style lang="scss" scoped>
+  .m5 {
+    margin: 5px;
+  }
   .drag{
       position: absolute;
       display:flex;
       justify-content:center;
       align-items:center;
       pointer-events: none;
-      opacity: 1;
+      opacity: 0.6;
       border-radius: 2px;
       background-size: cover;
       background: rgba(13, 175, 156, 0.15);
@@ -279,16 +347,16 @@ export default {
   }
   .undrag{
     position:absolute;
-    opacity: 1;
     display:flex;
     justify-content:center;
     align-items:center;
+    background-color: #FCFCFC;
   }
   .divDoor{
      background: url('../../../../assets/image/web/seat/real-door.svg')
     center center no-repeat;
     background-size:  100%;
-    background-color:#FFFFFF;
+    background-color:#FCFCFC;
   }
    .divDoor-selected{
      background: url('../../../../assets/image/web/seat/real-door-selected.svg')
@@ -322,10 +390,14 @@ export default {
   .divRostrumBox{
       display: flex;
       flex-direction: column ;
+     justify-content:center;
+     align-items:center;
     }
    .divRostrumBoxPre{
       display: flex;
       flex-direction: column ;
+       justify-content:center;
+          align-items:center;
       border: 1px dashed #0DAF9C;
       border-radius: 4px;
     }
@@ -347,56 +419,54 @@ export default {
     border-radius: 4px;
   }
  .rostrum-seat{
-
     background: url('../../../../assets/image/web/seat/rostrum-seat-down.svg')
     center center no-repeat;
     background-size: 100% 100%;
-    line-height: 42px;
   }
   .rostrum-seat-unset{
-
     background: url('../../../../assets/image/web/seat/rostrum-seat-unset-down.svg')
     center center no-repeat;
     background-size: 100% 100%;
-    line-height: 42px;
   }
   .rostrum-seat-selected{
-
     background: url('../../../../assets/image/web/seat/rostrum-seat-selected-down.svg')
     center center no-repeat;
     background-size: 100% 100%;
-    line-height: 42px;
 
   }
   .rostrum-seat-span__selected {
     color:#0DAF9C;
   }
   .rostrum-seat__common {
-    width: 100%;
-    height: 100%;
+    width: 32px;
+    height: 32px;
     display: flex;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     span {
-      width: 100%;
-      height: 100%;
       font-size: 12px;
       text-align: center;
     }
   }
   .rostrum-seat__input {
-    margin: 4px;
-    border-radius: 2px;
-    border: 1px solid #333e5e;
+    width: 42px;
+    height: 42px;
+    span {
+      width: 37px;
+      height: 28px;
+      border-radius: 4px;
+      word-break: break-all;
+      border: 1px solid #333e5e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
   }
  .divMainScreen{
       display: flex;
       flex-direction: row ;
-      font-size:0;
-      margin: 0; padding: 0; border: 0;
-      img{
-        display: block;
-      }
+       align-items: center;
+      justify-content: center;
   }
 .divTransform90
   {
