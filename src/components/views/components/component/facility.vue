@@ -1,15 +1,15 @@
 <template>
-<div :class="[dragClass, transformClass]" :style="{width:divWidth*(gridSize+doubleBorder)+'px',
-      height:divHeight*(gridSize+doubleBorder)+'px'}">
+<div :class="[dragClass, transformClass]" :style="{width:divWidth*(gridSize+doubleBorder)-doubleBorder+'px',
+      height:divHeight*(gridSize+doubleBorder)-doubleBorder+'px'}">
      <!--会议桌-->
      <div v-if="facilityType==='table'" :class='divTableClass'
-      :style="{width:divWidth*(gridSize+doubleBorder)+'px',
-      height:divHeight*(gridSize+doubleBorder)+'px'}" >
+      :style="{width:divWidth*(gridSize+doubleBorder)-doubleBorder+'px',
+      height:divHeight*(gridSize+doubleBorder)-doubleBorder+'px'}" >
     </div>
      <!--主席台-->
     <div v-else-if="facilityType === 'rostrum'"  :class='divRostrumBoxClass'
-    :style="{width:divWidth*(gridSize+doubleBorder)+'px',
-         height:divHeight*(gridSize+doubleBorder)+'px'}">
+    :style="{width:divWidth*(gridSize+doubleBorder)-doubleBorder+'px',
+         height:divHeight*(gridSize+doubleBorder)-doubleBorder+'px'}">
     <div class='divRostrumSeats' v-if="rostrumCount>0">
           <div
             v-for="(itme,index) in rostrumCount"
@@ -25,8 +25,8 @@
             <span v-else-if="!isPreview">主{{getArray[index]}}</span>
           </div>
         </div>
-        <div :class='divRostrumClass' :style="{width:divWidth*(gridSize+doubleBorder)+'px',
-         height:divRostrumHeight*(gridSize+doubleBorder)+'px'}">
+        <div :class='divRostrumClass' :style="{width:divWidth*(gridSize+doubleBorder)-doubleBorder+'px',
+         height:divRostrumHeight*(gridSize+doubleBorder)-doubleBorder+'px'}">
         </div>
     </div>
      <!--门-->
@@ -36,8 +36,8 @@
     </div>
      <!--屏幕-->
     <div v-else-if="facilityType === 'mainScreen'" class='divMainScreen'
-         :style="{width:divWidth*(gridSize+doubleBorder)+'px',
-      height:divHeight*(gridSize+doubleBorder)+'px'}" >
+         :style="{width:divWidth*(gridSize+doubleBorder)-doubleBorder+'px',
+      height:divHeight*(gridSize+doubleBorder)-doubleBorder+'px'}" >
        <img :src="reqType === 1?
        require('../../../../assets/image/web/seat/screen-selected-left.svg'):
       (reqType === 2?require('../../../../assets/image/web/seat/screen-left.svg'):

@@ -70,10 +70,10 @@
                 :style="{
                   top:(gridSize+doubleBorder)*facility.topIndex
                   +diffLeftTop(facility.facilityOrientation,
-                  facility.facilityWidth,facility.facilityHeight,gridSize+doubleBorder)+'px',
+                  facility.facilityWidth,facility.facilityHeight,gridSize+doubleBorder)+doubleBorder/2+'px',
                   left:(gridSize+doubleBorder)*facility.leftIndex
                   -diffLeftTop(facility.facilityOrientation,
-                  facility.facilityWidth,facility.facilityHeight,gridSize+doubleBorder)+'px'}"
+                  facility.facilityWidth,facility.facilityHeight,gridSize+doubleBorder)+doubleBorder/2+'px'}"
                   :reqType="facility.selected?1:2">
             </facility>
           </div>
@@ -948,9 +948,9 @@ export default {
           this.$nextTick(() => {
             const newWidth = this.seatModelArrayWidth * (this.gridSize + this.doubleBorder);
             const newHeight = this.seatModelArrayHeight * (this.gridSize + this.doubleBorder);
-            const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2) - $('.menu-expanded').width() - 32;
+            const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2) -  - 32;
             const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2)
-          - $('.warp-breadcrum').height() - 32 + this.$refs.mainSeatAreaRef.scrollTop;
+           - 32 + this.$refs.mainSeatAreaRef.scrollTop;
             this.modifyStyle(this.$refs.seatsRef.$el.style, `${newWidth}px`, `${newHeight}px`, `${top}px`, `${left}px`);
           });
         }
@@ -1032,9 +1032,9 @@ export default {
             const newWidth = this.facilityInfo.facilityWidth * (this.gridSize + this.doubleBorder);
             const newHeight = this.facilityInfo.facilityHeight
                               * (this.gridSize + this.doubleBorder);
-            const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2) - $('.menu-expanded').width() - 32;
+            const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2)  - 32;
             const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2)
-        - $('.warp-breadcrum').height() - 32 + this.$refs.mainSeatAreaRef.scrollTop;
+            - 32 + this.$refs.mainSeatAreaRef.scrollTop;
             this.modifyStyle(this.$refs.facilityRef.$el.style, '', '', `${top}px`, `${left}px`);
           });
         }
@@ -1408,17 +1408,17 @@ export default {
       if (this.$refs.seatsRef) {
         const newWidth = this.seatModelArrayWidth * (this.gridSize + this.doubleBorder);
         const newHeight = this.seatModelArrayHeight * (this.gridSize + this.doubleBorder);
-        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2) - $('.menu-expanded').width() - 32;
+        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2)  - 32;
         const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2)
-        - $('.warp-breadcrum').height() - 32 + this.$refs.mainSeatAreaRef.scrollTop;
+         - 32 + this.$refs.mainSeatAreaRef.scrollTop;
         // const style = `left: ${left}px;top: ${top}px;width:${newWidth}px;height:${newHeight}px`;
         // this.$refs.seatsRef.$el.style = style;
         this.modifyStyle(this.$refs.seatsRef.$el.style, `${newWidth}px`, `${newHeight}px`, `${top}px`, `${left}px`);
       } else if (this.$refs.facilityRef) { // 移动状态的设施
         const newWidth = this.facilityInfo.facilityWidth * (this.gridSize + this.doubleBorder);
         const newHeight = this.facilityInfo.facilityHeight * (this.gridSize + this.doubleBorder);
-        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2) - $('.menu-expanded').width() - 32;
-        const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2) - $('.warp-breadcrum').height()
+        const left = e.clientX - this.$refs.seatWrapperRef.offsetLeft - Math.ceil(newWidth / 2)  - 32;
+        const top = e.clientY - this.$refs.seatWrapperRef.offsetTop - Math.ceil(newHeight / 2) 
          - 32 + this.$refs.mainSeatAreaRef.scrollTop;
         // const style = `left: ${left}px;top: ${top}px;width:${newWidth}px;height:${newHeight}px`;
         // this.$refs.facilityRef.$el.style = style;
@@ -1442,14 +1442,14 @@ export default {
         const widthValue = Math.abs(this.reactArea.startX - this.reactArea.endX);
         const heightValue = Math.abs(this.reactArea.startY - this.reactArea.endY);
         if (this.reactArea.startX >= this.reactArea.endX) {
-          leftValue = this.reactArea.endX - this.$refs.seatWrapperRef.offsetLeft - $('.menu-expanded').width() - 32;
+          leftValue = this.reactArea.endX - this.$refs.seatWrapperRef.offsetLeft   - 32;
         } else {
-          leftValue = this.reactArea.startX - this.$refs.seatWrapperRef.offsetLeft - $('.menu-expanded').width() - 32;
+          leftValue = this.reactArea.startX - this.$refs.seatWrapperRef.offsetLeft   - 32;
         }
         if (this.reactArea.startY > this.reactArea.endY) {
-          topValue = this.reactArea.endY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop - $('.warp-breadcrum').height() - 50;
+          topValue = this.reactArea.endY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop  - 50;
         } else {
-          topValue = this.reactArea.startY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop - $('.warp-breadcrum').height() - 50;
+          topValue = this.reactArea.startY - this.$refs.seatWrapperRef.offsetTop + this.reactArea.scrollTop  - 50;
         }
         // 判断同时有宽高才开始画虚线框
 
@@ -1802,7 +1802,7 @@ export default {
           return;
         }
         // 判断是否越界
-        if (row < 2 || column < 2
+        if (row < 2 || column < 2 
          || parseInt(row, 10) + 1 > this.rows - 2 || parseInt(column, 10) + 1 > this.columns - 2
         ) {
           this.forbidden = true;
@@ -1822,7 +1822,7 @@ export default {
           // 切换座位时pop 重新渲染
           this.showEditForm = false;
           this.$nextTick(() => {
-            this.modifyStyle(this.$refs.popDiv.style, `${this.gridSize}px`, `${this.gridSize}px`, `${e.target.offsetTop}px`, `${e.target.offsetLeft}px`);
+            this.modifyStyle(this.$refs.popDiv.style, `${this.gridSize}px`, `${this.gridSize}px`, `${e.target.offsetTop}px`, `${e.target.offsetLeft+this.doubleBorder/2}px`);
             this.editInfo.type = '座位';
             this.editInfo.top = row;
             this.editInfo.left = column;
@@ -1975,7 +1975,6 @@ export default {
     z-index: 998;
   }
   .seatLayout{
-
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -2063,98 +2062,60 @@ export default {
   .el-col_empty{
     min-height:1px;
   }
+ .background-img-common(@imgName,@width,@height) {
+  background: url('../../../assets/image/web/seat/@{imgName}.svg')  center center no-repeat;
+  background-size: @width  @height;
+}
  .normal-seat-left{
-     background: url('../../../assets/image/web/seat/normal-seat-left.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
+     .background-img-common('normal-seat-left','32px','32px');
   }
  .normal-seat-right{
-    background: url('../../../assets/image/web/seat/normal-seat-right.svg')
-      center center no-repeat;
-    background-size: 32px  32px;
+    .background-img-common('normal-seat-right','32px','32px');
   }
    .normal-seat-up{
-    background: url('../../../assets/image/web/seat/normal-seat-up.svg')
-     center center no-repeat;
-    background-size: 32px  32px;
+    .background-img-common('normal-seat-up','32px','32px');
   }
  .normal-seat-down{
-    background: url('../../../assets/image/web/seat/normal-seat-down.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
+    .background-img-common('normal-seat-down','32px','32px');
   }
    .normal-seat-selected-left{
-     background: url('../../../assets/image/web/seat/normal-seat-selected-left.svg')
-     center center no-repeat;
-    background-size: 32px 32px;
+     .background-img-common('normal-seat-selected-left','32px','32px');
   }
  .normal-seat-selected-right{
-    background: url('../../../assets/image/web/seat/normal-seat-selected-right.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
+    .background-img-common('normal-seat-selected-right','32px','32px');
   }
-   .normal-seat-selected-up{
-    background: url('../../../assets/image/web/seat/normal-seat-selected-up.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
+  .normal-seat-selected-up{
+     .background-img-common('normal-seat-selected-up','32px','32px');
   }
  .normal-seat-selected-down{
-    background: url('../../../assets/image/web/seat/normal-seat-selected-down.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
+     .background-img-common('normal-seat-selected-down','32px','32px');
   }
   .senior-seat-left{
-    background: url('../../../assets/image/web/seat/senior-seat-left.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
+    .background-img-common('senior-seat-left','32px','32px');
   }
  .senior-seat-right{
-    background: url('../../../assets/image/web/seat/senior-seat-right.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
-
+     .background-img-common('senior-seat-right','32px','32px');
   }
   .senior-seat-down{
-    background: url('../../../assets/image/web/seat/senior-seat-down.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
-
+     .background-img-common('senior-seat-down','32px','32px');
   }
   .senior-seat-up{
-    background: url('../../../assets/image/web/seat/senior-seat-up.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
-
+      .background-img-common('senior-seat-up','32px','32px');
   }
  .senior-seat-selected-left{
-    background: url('../../../assets/image/web/seat/senior-seat-selected-left.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
-
+    .background-img-common('senior-seat-selected-left','32px','32px');
   }
  .senior-seat-selected-right{
-    background: url('../../../assets/image/web/seat/senior-seat-selected-right.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
-
+    .background-img-common('senior-seat-selected-right','32px','32px');
   }
   .senior-seat-selected-down{
-    background: url('../../../assets/image/web/seat/senior-seat-selected-down.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
-
+   .background-img-common('senior-seat-selected-down','32px','32px');
   }
  .senior-seat-selected-up{
-    background: url('../../../assets/image/web/seat/senior-seat-selected-up.svg')
-    center center no-repeat;
-    background-size: 32px  32px;
+     .background-img-common('senior-seat-selected-up','32px','32px');
 
   }
-  .senior-seat{
-    background-size: 32px  32px;
-
-  }
-  .add-seat{
+  .add-seat-common(@background){
     pointer-events: none;
     display:flex;
     justify-content:center;
@@ -2163,15 +2124,13 @@ export default {
     background: rgba(13, 175, 156, 0.15);
     border-radius:2px;position: absolute;
   }
-  .add-seat-unset{
-    pointer-events: none;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    width:55px;height:56px;
-    background: rgba(253, 87, 81, 0.15);
-    border-radius:2px;position: absolute;
+  .add-seat{
+.add-seat-common(rgba(13, 175, 156, 0.15))
   }
+  .add-seat-unset{
+    .add-seat-common(rgba(253, 87, 81, 0.15);)
+  }
+
   .unenable-events{
       pointer-events: none;
   }
@@ -2195,47 +2154,31 @@ export default {
        display: block;
     }
    #table{
-       background: url('../../../assets/image/web/seat/table.svg')
-       center center no-repeat;
-      background-size: 60px 48px;
+       .background-img-common('table','60px','48px');
     }
     #mainScreen{
-       background: url('../../../assets/image/web/seat/mainScreen.svg')
-       center center no-repeat;
-       background-size: 50px 48px;
+        .background-img-common('mainScreen','50px','48px');
       }
     #rostrum{
-        background: url('../../../assets/image/web/seat/rostrum.svg')
-        center center no-repeat;
-       background-size: 56px 48px;
+      .background-img-common('rostrum','56px','48px');
     }
     #door{
-     background: url('../../../assets/image/web/seat/door.svg')
-     center center no-repeat;
-     background-size: 40px 48px;
+        .background-img-common('door','40px','48px');
    }
     &:hover{
       border: 1px solid @green;
       background: #F3FFFE;
       #table{
-       background: url('../../../assets/image/web/seat/table-hover.svg')
-       center center no-repeat;
-            background-size: 60px 48px;
+        .background-img-common('table-hover','60px','48px');
       }
       #mainScreen{
-       background: url('../../../assets/image/web/seat/mainScreen-hover.svg')
-      center center no-repeat;
-      background-size: 50px 48px;
+        .background-img-common('mainScreen-hover','50px','48px');
     }
       #rostrum{
-        background: url('../../../assets/image/web/seat/rostrum-hover.svg')
-        center center no-repeat;
-                   background-size: 56px 48px;
+      .background-img-common('rostrum-hover','56px','48px');
       }
       #door{
-       background: url('../../../assets/image/web/seat/door-hover.svg')
-       center center no-repeat;
-        background-size: 40px 48px;
+    .background-img-common('door-hover','40px','48px');
       }
     }
   }
@@ -2254,28 +2197,21 @@ export default {
        width: 62px;
     }
    #rostrum{
-      background: url('../../../assets/image/web/seat/rostrum-disable.svg')
-      center center no-repeat;
-      background-size: 56px 48px;
+  
+         .background-img-common('rostrum-disable','56px','48px');
     }
   #door{
-     background: url('../../../assets/image/web/seat/door-disable.svg')
-     center center no-repeat;
-    background-size: 40px 48px;
+
+        .background-img-common('door-disable','40px','48px');
    }
   }
 
-  .dialog-model{
+.dialog-model{
     height: 252px;
     background: #F3FFFE;
-
   }
  .dialog-model-detail{
     height: 390px;
-      .el-input {
-      width: 100px;
-
-    }
   }
   .div-preview{
     display: flex;
@@ -2283,7 +2219,7 @@ export default {
     align-items:center;
     width: 197px;
     height: 198px;
-    opacity: 0.8;
+    opacity: 1.0;
     border: 1px solid #dcfaf6;
     // background:-moz-linear-gradient(top,transparent 65px, #86D7CD 66px ),
     //-moz-linear-gradient(left, transparent 65px, #86D7CD 66px);
@@ -2326,8 +2262,7 @@ export default {
 }
 .popDiv{
   position: absolute;
-  opacity:0.5;
-  background-color:red;
+
  pointer-events: none;
 }
 </style>
